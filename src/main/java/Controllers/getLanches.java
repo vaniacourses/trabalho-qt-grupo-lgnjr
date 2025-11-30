@@ -1,14 +1,7 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package Controllers;
 
-import DAO.DaoBebida;
 import DAO.DaoLanche;
 import Helpers.ValidadorCookie;
-import Model.Bebida;
 import Model.Lanche;
 import com.google.gson.Gson;
 import java.io.IOException;
@@ -20,94 +13,116 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-/**
- *
- * @author kener_000
- */
 public class getLanches extends HttpServlet {
 
-    /**
-     * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
-     * methods.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        
-        ////////Validar Cookie
+
+        // Verificação defensiva 1
+        if (response != null) {
+            response.setContentType("application/json");
+            response.setCharacterEncoding("UTF-8");
+        }
+
         boolean resultado = false;
-        
-        try{
-        Cookie[] cookies = request.getCookies();
-        ValidadorCookie validar = new ValidadorCookie();
-        
-        resultado = validar.validarFuncionario(cookies);
-        }catch(java.lang.NullPointerException e){System.out.println(e);}
-        //////////////
-        
-        if(resultado){
-            
-            DaoLanche lancheDAO = new DaoLanche();
 
-            List<Lanche> lanches = lancheDAO.listarTodos();
+        try {
+            // Verificação defensiva 2
+            if (request != null) {
+                Cookie[] cookies = request.getCookies();
 
-            Gson gson = new Gson();
-            String json = gson.toJson(lanches);
+                // Verificação defensiva 3
+                if (cookies != null) {
+                    // AQUI MUDOU: Chama o método protegido em vez de 'new'
+                    ValidadorCookie validar = getValidadorCookie();
 
-        try (PrintWriter out = response.getWriter()) {
-            out.print(json);
-            out.flush();
+                    // Verificação defensiva 4
+                    if (validar != null) {
+                        // Atenção: no seu código original era validarFuncionario
+                        resultado = validar.validarFuncionario(cookies);
+                    }
+                }
+            }
+        } catch (java.lang.NullPointerException e) {
+            System.out.println(e);
+        }
+
+        // Caminho de Sucesso
+        if (resultado) {
+
+            // AQUI MUDOU: Pega o DAO pelo método
+            DaoLanche lancheDAO = getDaoLanche();
+
+            // Verificação defensiva 5
+            if (lancheDAO != null) {
+                List<Lanche> lanches = lancheDAO.listarTodos();
+
+                // Verificação defensiva 6
+                if (lanches != null) {
+
+                    // AQUI MUDOU: Pega o Gson pelo método
+                    Gson gson = getGson();
+
+                    // Verificação defensiva 7
+                    if (gson != null) {
+                        String json = gson.toJson(lanches);
+
+                        // Verificação defensiva 8
+                        if (json != null) {
+                            if (response != null) {
+                                try (PrintWriter out = response.getWriter()) {
+                                    if (out != null) {
+                                        out.print(json);
+                                        out.flush();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         } else {
-            try (PrintWriter out = response.getWriter()) {
-            out.println("erro");
+            // Caminho de Erro (Não autorizado)
+            if (response != null) {
+                try (PrintWriter out = response.getWriter()) {
+                    if (out != null) {
+                        out.println("erro");
+                    }
+                }
             }
         }
     }
 
-    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
-    /**
-     * Handles the HTTP <code>GET</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
+    // ==========================================================================
+    // MÉTODOS "HOOKS" (Ganchos) PARA O TESTE UNITÁRIO
+    // ==========================================================================
+
+    protected ValidadorCookie getValidadorCookie() {
+        return new ValidadorCookie();
+    }
+
+    protected DaoLanche getDaoLanche() {
+        return new DaoLanche();
+    }
+
+    protected Gson getGson() {
+        return new Gson();
+    }
+
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         processRequest(request, response);
     }
 
-    /**
-     * Handles the HTTP <code>POST</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         processRequest(request, response);
     }
 
-    /**
-     * Returns a short description of the servlet.
-     *
-     * @return a String containing servlet description
-     */
     @Override
     public String getServletInfo() {
         return "Short description";
-    }// </editor-fold>
-
+    }
 }
