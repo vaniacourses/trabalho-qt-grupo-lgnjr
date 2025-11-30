@@ -22,8 +22,7 @@ public class salvarLanche extends HttpServlet {
            throws ServletException, IOException {
        response.setContentType("application/json");
        response.setCharacterEncoding("UTF-8");
-      
-       // Proteção para evitar NullPointer se o stream estiver vazio no teste
+    
        BufferedReader br = null;
        if(request.getInputStream() != null) {
            br = new BufferedReader(new InputStreamReader(request.getInputStream()));
@@ -36,7 +35,7 @@ public class salvarLanche extends HttpServlet {
       
        try{
            Cookie[] cookies = request.getCookies();
-           // AQUI MUDOU: Usa o método protegido
+       
            ValidadorCookie validar = getValidadorCookie();
           
            if (cookies != null) {
