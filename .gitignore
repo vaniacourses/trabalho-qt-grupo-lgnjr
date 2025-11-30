@@ -1,2 +1,16 @@
 target/
 .env
+
+# Ignorar arquivos do IntelliJ
+.idea/
+*.iml
+
+# Ignorar arquivos do Eclipse
+.classpath
+.project
+.settings/
+.metadata/
+
+# Ignorar pastas de saída
+bin/
+target/

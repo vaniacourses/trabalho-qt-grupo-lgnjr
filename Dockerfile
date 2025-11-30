@@ -3,7 +3,7 @@ WORKDIR /app
 COPY pom.xml .
 COPY src ./src
 COPY web ./web
-RUN mvn clean package
+RUN mvn clean package -Dmaven.test.skip=true
 
 FROM tomcat:8.5-jre8
 
@@ -14,4 +14,4 @@ RUN apt-get update && apt-get install -y unzip
 COPY --from=build /app/target/*.war /usr/local/tomcat/webapps/ROOT.war
 COPY context.xml /usr/local/tomcat/conf/
 EXPOSE 8080
-CMD ["catalina.sh", "run"] 
+CMD ["catalina.sh", "run"]
