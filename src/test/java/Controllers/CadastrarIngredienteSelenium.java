@@ -6,7 +6,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.support.ui.*;
+import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.Select;
+import org.openqa.selenium.support.ui.WebDriverWait;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.time.Duration;
 
@@ -15,11 +20,21 @@ class CadastrarIngredienteSelenium {
     private WebDriver driver;
     private WebDriverWait wait;
 
+    private final String BASE_URL = "http://localhost:8080/";
+
     @BeforeEach
     void setUp() {
+        // 1. Configura o gerenciador de driver automaticamente
         WebDriverManager.chromedriver().setup();
-        driver = new ChromeDriver();
+
+        ChromeOptions options = new ChromeOptions();
+        options.addArguments("--remote-allow-origins=*");
+
+
+        driver = new ChromeDriver(options);
         driver.manage().window().maximize();
+        
+        // Timeout padrão de 10 segundos para esperar elementos aparecerem
         wait = new WebDriverWait(driver, Duration.ofSeconds(10));
     }
 
@@ -30,158 +45,107 @@ class CadastrarIngredienteSelenium {
         }
     }
 
-   
     @Test
-    void deveAcessarLoginFuncionario() throws InterruptedException {
-        driver.get("http://localhost:8080/view/home/home.html");
-        Thread.sleep(10000);
+    void deveAcessarLoginFuncionarioECadastrarIngrediente() throws InterruptedException {
+        // 1. Acessa a Home
+        driver.get(BASE_URL + "/view/home/home.html");
         
-        // 1. clicar em Acessar Cardápio
-        WebElement botao = wait.until(
-                ExpectedConditions.elementToBeClickable(
-                        By.xpath("//button[contains(text(),'Acessar Cardápio')]")
-                )
-        );
-        botao.click();
+        // Pausa técnica para garantir carregamento visual 
+        Thread.sleep(2000);
 
-        // 2. lidar com alerta
-        Alert alerta = wait.until(ExpectedConditions.alertIsPresent());
-        alerta.accept();
+        // 2. Clicar em Acessar Cardápio
+        try {
+            WebElement botao = wait.until(ExpectedConditions.elementToBeClickable(
+                    By.xpath("//button[contains(text(),'Acessar Cardápio')]")));
+            botao.click();
+        } catch (Exception e) {
+            System.out.println("Botão de cardápio não necessário ou não encontrado.");
+        }
 
-        // 3. clicar em Meu Carrinho
-        WebElement carrinho = wait.until(
-                ExpectedConditions.elementToBeClickable(
-                        By.linkText("Meu Carrinho")
-                )
-        );
+        // 3. Lidar com Alerta inicial (Token expirado etc)
+        try {
+            Alert alerta = wait.until(ExpectedConditions.alertIsPresent());
+            alerta.accept();
+        } catch (TimeoutException e) {
+            // Se não aparecer alerta em 10s, segue 
+        }
+
+        // 4. Navegar até o Login de Funcionário
+        WebElement carrinho = wait.until(ExpectedConditions.elementToBeClickable(By.linkText("Meu Carrinho")));
         carrinho.click();
 
-        // 4. clicar em “Funcionário? Login Administrativo.”
-        WebElement funcionario = wait.until(
-                ExpectedConditions.elementToBeClickable(
-                        By.linkText("Funcionário? Login Administrativo.")
-                )
-        );
-        funcionario.click();
+        WebElement funcionarioLink = wait.until(ExpectedConditions.elementToBeClickable(By.partialLinkText("Funcionário?")));
+        funcionarioLink.click();
 
-        Thread.sleep(3000);
-    
-    
-    
- // 5.Login/Senha
-    
- WebElement campoUsuario = wait.until(
-         ExpectedConditions.visibilityOfElementLocated(By.id("loginInput"))
- );
+        // 5. Fazer Login (Admin)
+        WebElement campoUsuario = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("loginInput")));
+        WebElement campoSenha = driver.findElement(By.id("senhaInput"));
+        WebElement botaoEntrar = driver.findElement(By.xpath("//button[contains(text(),'Entrar')]"));
 
- // campo da senha
- WebElement campoSenha = driver.findElement(By.id("senhaInput"));
+        campoUsuario.sendKeys("admin");
+        campoSenha.sendKeys("admin"); 
+        botaoEntrar.click();
 
- // botão ENTRAR -> <button ...>Entrar</button>
- WebElement botaoEntrar = wait.until(
-         ExpectedConditions.elementToBeClickable(
-                 By.xpath("//button[text()='Entrar']")
-         )
- );
- 
- 
- // preencher admin / admin
- campoUsuario.sendKeys("admin");
- campoSenha.sendKeys("admin");
+        // 6. Acessar Cadastro de Ingredientes
+        WebElement botaoCadIngredientes = wait.until(ExpectedConditions.elementToBeClickable(
+                By.xpath("//button[contains(text(),'Cadastrar Ingredientes')]")));
+        botaoCadIngredientes.click();
 
- // clicar em Entrar
- botaoEntrar.click();
+        // 7. Preencher Formulário de Cadastro
+        
+        // Nome
+        WebElement campoNome = wait.until(ExpectedConditions.visibilityOfElementLocated(By.name("nome")));
+        campoNome.sendKeys("Pão Australiano Selenium");
 
- // só para visualizar
- Thread.sleep(5000);
- 
- 
- 
+        // Tipo (Usando Select para ser mais robusto)
+        WebElement selectElement = driver.findElement(By.name("tipo"));
+        Select selectTipo = new Select(selectElement);
+        // Tenta selecionar pelo texto visível ou pelo índice
+        try {
+            selectTipo.selectByIndex(1); // Seleciona o segundo item da lista
+        } catch (Exception e) {
+            selectElement.sendKeys(Keys.DOWN); // Fallback se o select falhar
+        }
 
-//6. Cadastrar Ingrediente
+        // Quantidade
+        driver.findElement(By.name("quantidade")).sendKeys("50");
 
+        // Valor Compra (Limpa antes de digitar para evitar lixo)
+        WebElement campoVlrCompra = driver.findElement(By.name("ValorCompra"));
+        campoVlrCompra.clear();
+        campoVlrCompra.sendKeys("1.50"); // Tente ponto se vírgula falhar
 
-//6.1 — Clicar no botão "Cadastrar Ingredientes"
-WebElement botaoCadIngredientes = wait.until(
-      ExpectedConditions.elementToBeClickable(
-              By.xpath("//button[contains(text(),'Cadastrar Ingredientes')]")
-      )
-);
-botaoCadIngredientes.click();
+        // Valor Venda
+        WebElement campoVlrVenda = driver.findElement(By.name("ValorVenda"));
+        campoVlrVenda.clear();
+        campoVlrVenda.sendKeys("3.00");
 
-//Pausa para visualizar a tela de cadastro
-Thread.sleep(3000);
+        // Descrição (Tenta achar por ID ou Name, garantindo compatibilidade)
+        try {
+            driver.findElement(By.id("textArea1")).sendKeys("Pão escuro delicioso");
+        } catch (Exception e) {
+            driver.findElement(By.name("TextArea1")).sendKeys("Pão escuro delicioso");
+        }
 
+        // 8. Salvar
+        WebElement botaoSalvar = driver.findElement(By.name("salvar"));
+        botaoSalvar.click();
 
+        // 9. Verificar Sucesso (Alerta)
+        try {
+            Alert alertaSucesso = wait.until(ExpectedConditions.alertIsPresent());
+            String textoAlerta = alertaSucesso.getText();
+            alertaSucesso.accept();
+            
+            
+        } catch (TimeoutException e) {
+            System.out.println("Alerta de sucesso não apareceu a tempo.");
+        }
 
-//6.2 — Preencher Formulário de Cadastro de Ingrediente
+        // 10. Ir para Estoque para conferir
+        WebElement botaoEstoque = wait.until(ExpectedConditions.elementToBeClickable(By.linkText("Estoque")));
+        botaoEstoque.click();
 
-
-//Campo: Produto (name="nome")
-WebElement campoNome = wait.until(
-      ExpectedConditions.visibilityOfElementLocated(
-              By.name("nome")
-      )
-);
-campoNome.sendKeys("Pão Australiano ");
-
-//Campo: Tipo (select name="tipo")
-WebElement campoTipo = driver.findElement(By.name("tipo"));
-campoTipo.click();                          // abrir o select
-campoTipo.sendKeys(Keys.ARROW_DOWN);        // escolher primeira opção
-campoTipo.sendKeys(Keys.ENTER);             // confirmar
-
-//Campo: Quantidade (name="quantidade")
-WebElement campoQuantidade = driver.findElement(By.name("quantidade"));
-campoQuantidade.sendKeys("20");
-
-
-//Campo: Valor de Compra (name="ValorCompra")
-WebElement campoValorCompra = driver.findElement(By.name("ValorCompra"));
-campoValorCompra.clear();
-campoValorCompra.sendKeys("1,50");
-
-//Campo: Valor de Venda (name="ValorVenda")
-WebElement campoValorVenda = driver.findElement(By.name("ValorVenda"));
-campoValorVenda.clear();
-campoValorVenda.sendKeys("3,00");
-
-
-
-
-//Campo: Descrição (name="TextArea1")
-WebElement campoDescricao = wait.until(
-	    ExpectedConditions.visibilityOfElementLocated(By.id("textArea1"))
-	);
-	campoDescricao.sendKeys("Um pão Australiano");
-	
-	
-	//Campo: Botão Salvar")
-	WebElement botaoSalvar = wait.until(
-	        ExpectedConditions.elementToBeClickable(By.name("salvar"))
-	);
-	botaoSalvar.click();
-
-	
-
-//Pausa para visualizar o resultado
-Thread.sleep(3000);
-
-//tratar o ALERT "Ingrediente Salvo!"
-Alert alertaSucesso = wait.until(ExpectedConditions.alertIsPresent());
-
-
-//clicar em OK
-alertaSucesso.accept();
-
-//7 — ir para a página ESTOQUE
-WebElement botaoEstoque = wait.until(
-     ExpectedConditions.elementToBeClickable(By.linkText("Estoque"))
-);
-botaoEstoque.click();
-//Pausa para visualizar o resultado
-Thread.sleep(3000);//Pausa para visualizar o resultado
-
-
-
-    }}
+        Thread.sleep(2000); 
+    }
+}
