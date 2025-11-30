@@ -13,6 +13,12 @@ import org.json.JSONObject;
 
 public class alterarStatusLanchonete extends HttpServlet {
 
+    private DaoStatusLanchonete dao;
+
+    public alterarStatusLanchonete(DaoStatusLanchonete mockDao) {
+        this.dao = mockDao;
+    }
+
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         
@@ -46,8 +52,11 @@ public class alterarStatusLanchonete extends HttpServlet {
                     // Verificação se a chave existe antes de pegar (+1)
                     if (dados.has("status")) {
                         
+                        if (dados.isNull("status")) {
+                            processarStatusInvalido(response, this.dao);
+                            return;
+                        }
                         String novoStatus = dados.getString("status");
-                        DaoStatusLanchonete dao = new DaoStatusLanchonete();
                         boolean statusValido = false;
 
                         // Quebrando a condicional composta (ABERTO || FECHADO) em ifs separados
@@ -65,20 +74,19 @@ public class alterarStatusLanchonete extends HttpServlet {
                             // Separação da lógica de persistência baseada na flag (+1)
                             if (statusValido) {
                                 // Caminho Feliz: Status Correto
-                                dao.alterarStatus(novoStatus);
+                                this.dao.alterarStatus(novoStatus);
                                 enviarResposta(response, novoStatus);
                             } else {
                                 // Caminho Alternativo: Status Inválido vira ABERTO
-                                processarStatusInvalido(response, dao);
+                                processarStatusInvalido(response, this.dao);
                             }
                         } else {
                             // Caso status venha nulo no JSON
-                            processarStatusInvalido(response, dao);
+                            processarStatusInvalido(response, this.dao);
                         }
                     } else {
                          // JSON sem campo status, trata como inválido (default ABERTO)
-                        DaoStatusLanchonete dao = new DaoStatusLanchonete();
-                        processarStatusInvalido(response, dao);
+                        processarStatusInvalido(response, this.dao);
                     }
                 } catch (JSONException e) {
                     // Tratamento de erro de parse (+1 implícito no fluxo)
@@ -97,8 +105,8 @@ public class alterarStatusLanchonete extends HttpServlet {
     // Método auxiliar para isolar o "Default Case" (Status inválido vira ABERTO)
     // Extrair métodos não reduz a complexidade total do sistema, mas ajuda a organizar o caos criado acima.
     private void processarStatusInvalido(HttpServletResponse response, DaoStatusLanchonete dao) throws IOException {
-        if (dao != null) { // (+1)
-            dao.alterarStatus("ABERTO");
+        if (this.dao != null) { // (+1)
+            this.dao.alterarStatus("ABERTO");
         }
         enviarResposta(response, "ABERTO");
     }
