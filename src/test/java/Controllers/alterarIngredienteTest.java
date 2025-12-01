@@ -23,10 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-/**
- * Testes UNITÁRIOS da servlet alterarIngrediente.
- * Salvar este arquivo como: alterarIngredienteTest.java
- */
+
 public class alterarIngredienteTest {
 
     @Mock HttpServletRequest request;
@@ -217,7 +214,7 @@ public class alterarIngredienteTest {
         StringWriter sw = new StringWriter();
         when(response.getWriter()).thenReturn(new PrintWriter(sw));
 
-        // Aqui sobrescrevemos para retornar null propositalmente
+      
         alterarIngrediente servlet = new alterarIngrediente() {
             @Override protected ValidadorCookie getValidadorCookie() { return null; }
             @Override protected DaoIngrediente getDaoIngrediente() { return daoIngredienteMock; }

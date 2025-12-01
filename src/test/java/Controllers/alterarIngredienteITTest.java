@@ -1,7 +1,7 @@
 package Controllers;
 
 import DAO.DaoIngrediente;
-import DAO.DaoUtil; // <--- Importante: Precisamos importar para mockar a conexão
+import DAO.DaoUtil; // 
 import Helpers.ValidadorCookie;
 import Model.Ingrediente;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,10 +27,7 @@ import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-/**
- * Teste de INTEGRAÇÃO:
- * Servlet alterarIngrediente + DaoIngrediente real + Postgres real (via Localhost).
- */
+
 public class alterarIngredienteITTest { 
 
     private alterarIngrediente servlet;
@@ -55,8 +52,7 @@ public class alterarIngredienteITTest {
             protected ValidadorCookie getValidadorCookie() {
                 return validadorMock;
             }
-            // NÃO sobrescrevemos getDaoIngrediente() aqui, pois queremos que ele chame o DAO real.
-            // O problema de conexão do DAO será resolvido via MockedConstruction no teste.
+      
         };
     }
 
@@ -83,10 +79,10 @@ public class alterarIngredienteITTest {
 
         when(request.getInputStream()).thenReturn(criarInput(json));
 
-        // --- INTERCEPTAÇÃO DA CONEXÃO DO DAO ---
-        // Isso resolve o erro "UnknownHostException: db".
-        // Quando o DaoIngrediente fizer "new DaoUtil()", nós interceptamos e
-        // mandamos o método .conecta() retornar uma conexão real para o LOCALHOST.
+        // INTERCEPTAÇÃO DA CONEXÃO DO DAO 
+  
+        // Quando o DaoIngrediente fizer "new DaoUtil()", intercepta e 
+        // manda o método .conecta() retornar uma conexão real para o LOCALHOST.
         try (MockedConstruction<DaoUtil> mockedDaoUtil = Mockito.mockConstruction(DaoUtil.class,
                 (mock, context) -> {
                     when(mock.conecta()).thenAnswer(invocation -> 
@@ -99,7 +95,7 @@ public class alterarIngredienteITTest {
                 })) {
 
             // 3) Executa a servlet real
-            // A servlet vai chamar getDaoIngrediente() -> new DaoIngrediente() -> new DaoUtil()
+            // A servlet vai chamar getDaoIngrediente()  new DaoIngrediente() new DaoUtil()
             // O DaoUtil será o nosso mock configurado acima, conectando no localhost.
             servlet.doPost(request, response);
 
@@ -125,7 +121,7 @@ public class alterarIngredienteITTest {
         verify(response).setCharacterEncoding("UTF-8");
     }
 
-    // --- MÉTODOS AUXILIARES ---
+    // MÉTODOS AUXILIARES
 
     private Ingrediente buscarIngredientePorId(DaoIngrediente dao, int id) {
         List<Ingrediente> todos = dao.listarTodos();
