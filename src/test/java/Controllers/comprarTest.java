@@ -1,22 +1,22 @@
 package Controllers;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import org.mockito.ArgumentCaptor;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.sql.DriverManager; // <--- Necessário para criar a conexão real
+import java.sql.DriverManager;
 
 import javax.servlet.ReadListener;
 import javax.servlet.ServletInputStream;
@@ -25,6 +25,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedConstruction;
 import org.mockito.Mockito;
 
@@ -32,25 +33,16 @@ import DAO.DaoBebida;
 import DAO.DaoCliente;
 import DAO.DaoLanche;
 import DAO.DaoPedido;
-import DAO.DaoUtil; // <--- Importante para interceptar a conexão
+import DAO.DaoUtil;
 import Helpers.ValidadorCookie;
+import Model.Bebida;
 import Model.Cliente;
 import Model.Lanche;
 import Model.Pedido;
 
-import Model.Lanche;
-import Model.Bebida;
-import DAO.DaoLanche;
-import DAO.DaoBebida;
-import static org.mockito.ArgumentMatchers.eq;      // Necessário para o teste novo
-import static org.mockito.ArgumentMatchers.argThat; // Necessário para o teste novo
-
 public class comprarTest {
 
-    // =========================================================================================
-    //                                  MÉTODOS AUXILIARES
-    // =========================================================================================
-    
+    // ----------------- MÉTODO AUXILIAR PARA MOCKAR O INPUT STREAM -----------------
     private void mockInputStream(HttpServletRequest req, String json) throws IOException {
         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(json.getBytes());
         ServletInputStream servletInputStream = new ServletInputStream() {
@@ -62,253 +54,316 @@ public class comprarTest {
         when(req.getInputStream()).thenReturn(servletInputStream);
     }
 
-    // =========================================================================================
-    //                                  PARTE 1: TESTES UNITÁRIOS
-    // =========================================================================================
-    
-    public class comprarParaTesteUnitario extends comprar {
+    // ----------------- WRAPPER PARA TESTE UNITÁRIO -----------------
+    public class comprarParaTesteUnitario extends Comprar {
         ValidadorCookie validadorMock;
         DaoPedido daoPedidoMock;
         DaoCliente daoClienteMock;
+        DaoLanche daoLancheMock; 
+        DaoBebida daoBebidaMock; 
 
-        public comprarParaTesteUnitario(ValidadorCookie v, DaoPedido dp, DaoCliente dc) {
+        public comprarParaTesteUnitario(ValidadorCookie v, DaoPedido dp, DaoCliente dc, DaoLanche dl, DaoBebida db) {
             this.validadorMock = v;
             this.daoPedidoMock = dp;
             this.daoClienteMock = dc;
+            this.daoLancheMock = dl;
+            this.daoBebidaMock = db;
         }
 
         @Override protected ValidadorCookie getValidadorCookie() { return validadorMock; }
         @Override protected DaoPedido getDaoPedido() { return daoPedidoMock; }
         @Override protected DaoCliente getDaoCliente() { return daoClienteMock; }
-        @Override protected DaoLanche getDaoLanche() { return null; }
-        @Override protected DaoBebida getDaoBebida() { return null; }
+        @Override protected DaoLanche getDaoLanche() { return daoLancheMock != null ? daoLancheMock : mock(DaoLanche.class); }
+        @Override protected DaoBebida getDaoBebida() { return daoBebidaMock != null ? daoBebidaMock : mock(DaoBebida.class); }
     }
 
+    // ----------------- TESTE UNITÁRIO: FLUXO SIMPLES -----------------
     @Test
-    public void UNITARIO_testeFluxoSimples_ComMocks() throws Exception {
-        // Mocks
+    public void UNITARIO_testeFluxoSimples_VerificaSetters() throws Exception {
         HttpServletRequest request = mock(HttpServletRequest.class);
         HttpServletResponse response = mock(HttpServletResponse.class);
         ValidadorCookie validador = mock(ValidadorCookie.class);
         DaoPedido daoPedido = mock(DaoPedido.class);
         DaoCliente daoCliente = mock(DaoCliente.class);
 
-        // Comportamento
         when(validador.validar(any())).thenReturn(true);
         when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("teste", "teste")});
-        
+
         Cliente clienteFake = new Cliente();
-        clienteFake.setId_cliente(1);
+        clienteFake.setId_cliente(99); 
         when(daoCliente.pesquisaPorID(anyString())).thenReturn(clienteFake);
 
-        mockInputStream(request, "{\"id\": 1}");
+        mockInputStream(request, "{\"id\": 99}");
+        when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
 
-        StringWriter textoSaida = new StringWriter();
-        when(response.getWriter()).thenReturn(new PrintWriter(textoSaida));
-
-        // Execução
-        comprar servlet = new comprarParaTesteUnitario(validador, daoPedido, daoCliente);
+        Comprar servlet = new comprarParaTesteUnitario(validador, daoPedido, daoCliente, null, null);
         servlet.processRequest(request, response);
 
-        // Verificação
-        verify(daoPedido, times(1)).salvar(any(Pedido.class));
-        assertTrue(textoSaida.toString().contains("Pedido Salvo") || textoSaida.toString().contains("ok"));
+        verify(response).setCharacterEncoding("UTF-8");
+        verify(response).setContentType("application/json");
+
+        ArgumentCaptor<Pedido> pedidoCaptor = ArgumentCaptor.forClass(Pedido.class);
+        verify(daoPedido).salvar(pedidoCaptor.capture());
+        
+        Pedido pedidoCapturado = pedidoCaptor.getValue();
+        assertNotNull(pedidoCapturado.getCliente());
+        assertEquals(99, pedidoCapturado.getCliente().getId_cliente());
     }
-    
+
+    // ----------------- TESTE UNITÁRIO: CÁLCULOS -----------------
     @Test
-    public void UNITARIO_testeFluxoCompleto_LancheEBebida_CalculaPrecoEVincula() throws Exception {
-        // --- 1. CRIAÇÃO DOS MOCKS ---
+    public void UNITARIO_testeCalculos_E_AtribuicaoQuantidade() throws Exception {
         HttpServletRequest request = mock(HttpServletRequest.class);
         HttpServletResponse response = mock(HttpServletResponse.class);
         ValidadorCookie validador = mock(ValidadorCookie.class);
         DaoPedido daoPedido = mock(DaoPedido.class);
         DaoCliente daoCliente = mock(DaoCliente.class);
-        
-        // Mocks adicionais para Produtos (Lanche e Bebida)
         DaoLanche daoLanche = mock(DaoLanche.class);
         DaoBebida daoBebida = mock(DaoBebida.class);
 
-        // --- 2. CONFIGURAÇÃO DOS COMPORTAMENTOS (STUBS) ---
-        
-        // Autenticação OK
         when(validador.validar(any())).thenReturn(true);
         when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("auth", "ok")});
-        
-        // Cliente existe
-        Cliente clienteFake = new Cliente();
-        clienteFake.setId_cliente(1);
-        when(daoCliente.pesquisaPorID(anyString())).thenReturn(clienteFake);
+        when(daoCliente.pesquisaPorID(anyString())).thenReturn(new Cliente());
 
-        // Configurar o retorno do Lanche (Simulando o Banco)
         Lanche lancheFake = new Lanche();
-        lancheFake.setId_lanche(10);
-        lancheFake.setValor_venda(20.0); // Preço unitário: 20.0
-        when(daoLanche.pesquisaPorNome("X-Bacon")).thenReturn(lancheFake);
+        lancheFake.setValor_venda(10.0);
+        when(daoLanche.pesquisaPorNome("Burguer")).thenReturn(lancheFake);
 
-        // Configurar o retorno da Bebida (Simulando o Banco)
         Bebida bebidaFake = new Bebida();
-        bebidaFake.setId_bebida(20);
-        bebidaFake.setValor_venda(5.0); // Preço unitário: 5.0
-        when(daoBebida.pesquisaPorNome("Coca")).thenReturn(bebidaFake);
+        bebidaFake.setValor_venda(5.0);
+        when(daoBebida.pesquisaPorNome("Refri")).thenReturn(bebidaFake);
 
-        // Mockar o retorno do pedido salvo (necessário para o método vincular funcionar)
         Pedido pedidoSalvo = new Pedido();
-        pedidoSalvo.setId_pedido(123); // ID gerado pelo banco
-        // Quando o sistema tentar buscar o pedido recém salvo, retornamos este objeto com ID
+        pedidoSalvo.setId_pedido(123); 
         when(daoPedido.pesquisaPorData(any(Pedido.class))).thenReturn(pedidoSalvo);
 
-        // --- 3. JSON DE ENTRADA ---
-        // Simula o JSON enviado pelo Front-end:
-        // "NomeProduto": ["descrição", "tipo", quantidade]
-        String jsonInput = "{" +
-                "\"id\": 1," +
-                "\"X-Bacon\": [\"delicioso\", \"lanche\", 2]," + 
-                "\"Coca\": [\"gelada\", \"bebida\", 1]" +        
-                "}";
+        String jsonInput = "{\"id\": 1,\"Burguer\": [\"desc\", \"lanche\", 3],\"Refri\": [\"desc\", \"bebida\", 2]}";
         mockInputStream(request, jsonInput);
+        when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
 
-        StringWriter sw = new StringWriter();
-        when(response.getWriter()).thenReturn(new PrintWriter(sw));
-
-        // --- 4. EXECUÇÃO ---
-        
-        // Instanciamos a classe de teste, mas SOBRESCREVENDO os métodos de Lanche e Bebida
-        // que na classe 'comprarParaTesteUnitario' original retornavam null.
-        comprar servlet = new comprarParaTesteUnitario(validador, daoPedido, daoCliente) {
-            @Override protected DaoLanche getDaoLanche() { return daoLanche; }
-            @Override protected DaoBebida getDaoBebida() { return daoBebida; }
-        };
-        
+        Comprar servlet = new comprarParaTesteUnitario(validador, daoPedido, daoCliente, daoLanche, daoBebida);
         servlet.processRequest(request, response);
 
-        // --- 5. VERIFICAÇÕES (ASSERTIONS) ---
-        
-        // A) Verifica se os produtos foram buscados no banco
-        verify(daoLanche, times(1)).pesquisaPorNome("X-Bacon");
-        verify(daoBebida, times(1)).pesquisaPorNome("Coca");
+        ArgumentCaptor<Pedido> pedidoCaptor = ArgumentCaptor.forClass(Pedido.class);
+        verify(daoPedido).salvar(pedidoCaptor.capture());
+        assertEquals(40.0, pedidoCaptor.getValue().getValor_total(), 0.01);
 
-        // B) Verifica se o cálculo do valor total está correto usando ArgumentCaptor
-        ArgumentCaptor<Pedido> captor = ArgumentCaptor.forClass(Pedido.class);
-        verify(daoPedido).salvar(captor.capture()); // Captura o pedido enviado para o salvar
-        
-        Pedido pedidoCapturado = captor.getValue();
-        
-        // Lógica do seu código: soma o valor de venda de cada item encontrado
-        // 20.0 (Lanche) + 5.0 (Bebida) = 25.0
-        assertEquals(25.0, pedidoCapturado.getValor_total(), 0.01, "O Valor Total do pedido está incorreto!");
+        ArgumentCaptor<Lanche> lancheCaptor = ArgumentCaptor.forClass(Lanche.class);
+        verify(daoPedido).vincularLanche(eq(pedidoSalvo), lancheCaptor.capture());
+        assertEquals(3, lancheCaptor.getValue().getQuantidade());
 
-        // C) Verifica se os vínculos foram feitos corretamente
-        // Garante que vinculou o Lanche correto ao Pedido correto
-        verify(daoPedido, times(1)).vincularLanche(eq(pedidoSalvo), any(Lanche.class));
-        
-        // Garante que vinculou a Bebida correta ao Pedido correto
-        verify(daoPedido, times(1)).vincularBebida(eq(pedidoSalvo), any(Bebida.class));
+        ArgumentCaptor<Bebida> bebidaCaptor = ArgumentCaptor.forClass(Bebida.class);
+        verify(daoPedido).vincularBebida(eq(pedidoSalvo), bebidaCaptor.capture());
+        assertEquals(2, bebidaCaptor.getValue().getQuantidade());
     }
-    
+
+    // ----------------- TESTE UNITÁRIO: COOKIE INVÁLIDO -----------------
     @Test
-    public void UNITARIO_testeErro_CookieInvalido_ImprimeErro() throws Exception {
-        // --- 1. Mocks ---
+    public void UNITARIO_testeErro_CookieInvalido() throws Exception {
         HttpServletRequest request = mock(HttpServletRequest.class);
         HttpServletResponse response = mock(HttpServletResponse.class);
         ValidadorCookie validador = mock(ValidadorCookie.class);
 
-        // --- 2. Comportamento: Validação Falha ---
-        when(validador.validar(any())).thenReturn(false); // <--- AQUI FORÇAMOS O ERRO
-        // Mesmo que tenha cookies, o validador diz não
-        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("auth", "invalido")});
-        
-        // Input stream não importa muito aqui, mas colocamos vazio para não dar erro de null
-        mockInputStream(request, "{}");
+        when(validador.validar(any())).thenReturn(false); 
+        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("auth", "mock")});
 
+        mockInputStream(request, "{}");
         StringWriter sw = new StringWriter();
         when(response.getWriter()).thenReturn(new PrintWriter(sw));
 
-        // --- 3. Execução ---
-        // Não precisamos dos DAOs aqui pois vai falhar antes
-        comprar servlet = new comprarParaTesteUnitario(validador, null, null);
+        Comprar servlet = new comprarParaTesteUnitario(validador, null, null, null, null);
         servlet.processRequest(request, response);
 
-        // --- 4. Verificação ---
-        String saida = sw.toString().trim();
-        
-        // Cobre a linha: out.println("erro");
-        assertTrue(saida.contains("erro"), "Deveria ter imprimido 'erro' no console");
+        assertTrue(sw.toString().trim().contains("erro"));
     }
 
-    // =========================================================================================
-    //                                  PARTE 2: TESTES DE INTEGRAÇÃO
-    // =========================================================================================
+    // cobertura de metodos
     
-    public class comprarParaTesteIntegracao extends comprar {
-        ValidadorCookie validadorMock;
+    @Test
+    public void UNITARIO_testeMetodosProtegidos_GarantirInstancias() {
+        // testa se os métodos getDao...() retornam instâncias válidas
+       
+        
+        Comprar servletReal = new Comprar();
+        
+        // 1. ValidadorCookie
+        assertNotNull(servletReal.getValidadorCookie(), "getValidadorCookie() não deve retornar null");
+        
+        // interceptar quando o DAO fizer "new DaoUtil()"
+        try (MockedConstruction<DaoUtil> mockedDaoUtil = Mockito.mockConstruction(DaoUtil.class,
+                (mock, context) -> {
+                    java.sql.Connection conexaoFake = mock(java.sql.Connection.class);
+                    when(mock.conecta()).thenReturn(conexaoFake);
+                })) {
 
-        public comprarParaTesteIntegracao(ValidadorCookie v) {
-            this.validadorMock = v;
+ 
+            
+            DaoCliente daoCliente = servletReal.getDaoCliente();
+            assertNotNull(daoCliente, "getDaoCliente() não deve retornar null");
+
+            DaoPedido daoPedido = servletReal.getDaoPedido();
+            assertNotNull(daoPedido, "getDaoPedido() não deve retornar null");
+            
+            DaoLanche daoLanche = servletReal.getDaoLanche();
+            assertNotNull(daoLanche, "getDaoLanche() não deve retornar null");
+            
+            DaoBebida daoBebida = servletReal.getDaoBebida();
+            assertNotNull(daoBebida, "getDaoBebida() não deve retornar null");
         }
+    }
 
+    // conrindo todas-arestas
+
+    @Test
+    public void COBERTURA_testeCatchNullPointer() throws Exception {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        ValidadorCookie validador = mock(ValidadorCookie.class);
+
+        mockInputStream(request, "{}");
+        when(request.getCookies()).thenThrow(new NullPointerException()); // Força Exception
+        
+        StringWriter sw = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(sw));
+
+        Comprar servlet = new comprarParaTesteUnitario(validador, null, null, null, null);
+        servlet.processRequest(request, response);
+
+        assertTrue(sw.toString().trim().contains("erro"));
+    }
+
+    @Test
+    public void COBERTURA_testeItensDesconhecidos_Ou_BancoNull() throws Exception {
+        // Cobre os 'else' dos IFs de tipo e verificação de null do banco
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        ValidadorCookie validador = mock(ValidadorCookie.class);
+        DaoPedido daoPedido = mock(DaoPedido.class);
+        DaoCliente daoCliente = mock(DaoCliente.class);
+        DaoLanche daoLanche = mock(DaoLanche.class);
+        DaoBebida daoBebida = mock(DaoBebida.class);
+
+        when(validador.validar(any())).thenReturn(true);
+        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("auth", "ok")});
+        when(daoCliente.pesquisaPorID(anyString())).thenReturn(new Cliente());
+
+        // Simula itens não encontrados no banco
+        when(daoLanche.pesquisaPorNome("X-Fantasma")).thenReturn(null);
+        when(daoBebida.pesquisaPorNome("Suco-Fantasma")).thenReturn(null);
+
+        
+        String jsonInput = "{" +
+                "\"id\": 1," +
+                "\"Movel\": [\"desc\", \"mesa\", 1]," + // Tipo desconhecido
+                "\"X-Fantasma\": [\"...\", \"lanche\", 1]," + // Retorna null do banco
+                "\"Suco-Fantasma\": [\"...\", \"bebida\", 1]" + // Retorna null do banco
+                "}";
+        mockInputStream(request, jsonInput);
+        when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
+
+        Comprar servlet = new comprarParaTesteUnitario(validador, daoPedido, daoCliente, daoLanche, daoBebida);
+        servlet.processRequest(request, response);
+
+        // Verifica que NADA foi vinculado (pois tudo era inválido)
+        verify(daoPedido, never()).vincularLanche(any(), any());
+        verify(daoPedido, never()).vincularBebida(any(), any());
+        
+        // Verifica que mesmo assim tentou salvar o pedido (comportamento atual do código)
+        verify(daoPedido).salvar(any(Pedido.class));
+    }
+
+    @Test
+    public void COBERTURA_testePedidoSalvoNull() throws Exception {
+        // Testa quando if (pedidoSalvo != null) -> else
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        ValidadorCookie validador = mock(ValidadorCookie.class);
+        DaoPedido daoPedido = mock(DaoPedido.class);
+        DaoCliente daoCliente = mock(DaoCliente.class);
+
+        when(validador.validar(any())).thenReturn(true);
+        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("auth", "ok")});
+        when(daoCliente.pesquisaPorID(anyString())).thenReturn(new Cliente());
+        
+        // DAO retorna null após salvar
+        when(daoPedido.pesquisaPorData(any(Pedido.class))).thenReturn(null);
+
+        mockInputStream(request, "{\"id\": 1}");
+        when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
+
+        Comprar servlet = new comprarParaTesteUnitario(validador, daoPedido, daoCliente, null, null);
+        servlet.processRequest(request, response);
+
+        verify(daoPedido).salvar(any(Pedido.class));
+    }
+
+    @Test
+    public void COBERTURA_testeDoPost() throws Exception {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        ValidadorCookie validador = mock(ValidadorCookie.class);
+        mockInputStream(request, "{}");
+        
+        when(validador.validar(any())).thenReturn(false);
+        when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
+
+        Comprar servlet = new comprarParaTesteUnitario(validador, null, null, null, null);
+        servlet.doPost(request, response);
+        verify(request).getCookies();
+    }
+
+    // integração com banco
+    
+    public class comprarParaTesteIntegracao extends Comprar {
+        ValidadorCookie validadorMock;
+        public comprarParaTesteIntegracao(ValidadorCookie v) { this.validadorMock = v; }
         @Override protected ValidadorCookie getValidadorCookie() { return validadorMock; }
-        // DAOs REAIS são usados aqui (DaoPedido e DaoCliente originais)
     }
 
     @Test
     public void INTEGRACAO_testeSalvarNoBancoReal() throws Exception {
-        // ... Mocks de Infra Web (Iguais) ...
         HttpServletRequest request = mock(HttpServletRequest.class);
         HttpServletResponse response = mock(HttpServletResponse.class);
         ValidadorCookie validador = mock(ValidadorCookie.class);
 
         when(validador.validar(any())).thenReturn(true);
         when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("sessao", "valida")});
-        
-        // Vamos tentar comprar com o Cliente ID 1
         mockInputStream(request, "{\"id\": 1}"); 
 
         StringWriter sw = new StringWriter();
         when(response.getWriter()).thenReturn(new PrintWriter(sw));
 
-        // Interceptando a conexão para usar localhost
         try (MockedConstruction<DaoUtil> mockedDaoUtil = Mockito.mockConstruction(DaoUtil.class,
                 (mock, context) -> {
                     when(mock.conecta()).thenAnswer(invocation -> {
                         return DriverManager.getConnection(
                             "jdbc:postgresql://localhost:5432/lanchonete", 
-                            "postgres", "123456"); // Suas credenciais
+                            "postgres", "123456"); 
                     });
                 })) {
 
-            // =====================================================================
-            // [NOVO] SETUP DE DADOS: INSERIR CLIENTE 1 ANTES DE TESTAR
-            // =====================================================================
-            // Como o banco é real, precisamos criar o cliente ou o teste falha (FK Error)
             try (java.sql.Connection conn = DriverManager.getConnection(
                     "jdbc:postgresql://localhost:5432/lanchonete", "postgres", "123456")) {
                 
-                // 1. Limpa o cliente 1 se já existir (para não dar erro de duplicidade)
-                // Nota: Talvez precise limpar pedidos antes por causa da FK, mas vamos tentar assim
+                // Limpeza e Preparação do Banco
                 java.sql.PreparedStatement stmtDelete = conn.prepareStatement(
                     "DELETE FROM tb_clientes WHERE id_cliente = 1");
-                try { stmtDelete.execute(); } catch (Exception ignore) {} // Ignora se falhar por FK
+                try { stmtDelete.execute(); } catch (Exception ignore) {} 
 
-                // 2. Insere o Cliente 1 na marra
                 java.sql.PreparedStatement stmtInsert = conn.prepareStatement(
                     "INSERT INTO tb_clientes (id_cliente, nome, sobrenome, telefone, usuario, senha, fg_ativo) " +
                     "VALUES (1, 'Usuario', 'Teste', '1199999999', 'user_teste', '123', 1) " +
-                    "ON CONFLICT (id_cliente) DO NOTHING" // Se seu Postgres for novo suporta isso
+                    "ON CONFLICT (id_cliente) DO NOTHING" 
                 );
                 stmtInsert.execute();
             }
-            // =====================================================================
 
-            // Agora sim, rodamos a Servlet
-            comprar servlet = new comprarParaTesteIntegracao(validador);
+            Comprar servlet = new comprarParaTesteIntegracao(validador);
             servlet.processRequest(request, response);
         }
 
-        // Verificação
         String saida = sw.toString();
         assertTrue(saida.contains("Pedido Salvo") || saida.contains("ok"), 
             "Falha na integração. Saída: " + saida);
-            
-        System.out.println("Teste de Integração passou! Cliente criado e Pedido salvo.");
     }
 }
