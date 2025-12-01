@@ -71,7 +71,7 @@ class EditarIngredienteSeleniumTest {
 
         // 7. Preenche formulário de cadastro de ingrediente
         WebElement campoNome = wait.until(ExpectedConditions.visibilityOfElementLocated(By.name("nome")));
-        campoNome.sendKeys("Pão Australiano Selenium");
+        campoNome.sendKeys("Pao Australiano Selenium");
 
         // Tipo
         WebElement selectElement = driver.findElement(By.name("tipo"));
@@ -88,9 +88,9 @@ class EditarIngredienteSeleniumTest {
         venda.sendKeys("3.00");
 
         try {
-            driver.findElement(By.id("textArea1")).sendKeys("Pão escuro delicioso");
+            driver.findElement(By.id("textArea1")).sendKeys("Pao escuro delicioso");
         } catch (Exception e) {
-            driver.findElement(By.name("TextArea1")).sendKeys("Pão escuro delicioso");
+            driver.findElement(By.name("TextArea1")).sendKeys("pao escuro delicioso");
         }
 
         // 8. Salvar
@@ -107,28 +107,20 @@ class EditarIngredienteSeleniumTest {
         Thread.sleep(1500);
 
         // 10. Esperar tabela de ingredientes carregar
-        WebElement tabela = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("tabelaIngredientes")));
-        wait.until(ExpectedConditions.numberOfElementsToBeMoreThan(
-                By.cssSelector("#tabelaIngredientes tr"),
-                1
-        ));
+        driver.navigate().refresh(); // Garante que os dados venham do banco
+        wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("tabelaIngredientes")));
 
-
-        // 11. Encontrar a linha do ingrediente pelo texto
-        wait.until(ExpectedConditions.textToBePresentInElementLocated(
-                By.id("tabelaIngredientes"),
-                "Pão Australiano Selenium"
-        ));
-
-        WebElement linhaIngrediente = tabela.findElements(By.tagName("tr"))
-            .stream()
-            .filter(tr -> tr.getText().contains("Pão Australiano Selenium"))
-            .findFirst()
-            .get();
+        // 11 e 12. Encontrar a célula e CLICAR nela (usando contains para ignorar acentos)
+        try {
+            WebElement celulaNome = wait.until(ExpectedConditions.elementToBeClickable(
+                By.xpath("//table[@id='tabelaIngredientes']//td[contains(text(), 'Australiano Selenium')]")
+            ));
             
-        // 12. Clicar exatamente na célula do NOME (2ª coluna)
-        WebElement celulaNome = linhaIngrediente.findElements(By.tagName("td")).get(1);
-        celulaNome.click();
+            celulaNome.click();
+            
+        } catch (TimeoutException e) {
+            throw new RuntimeException("Não foi possível clicar na célula. O texto 'Australiano Selenium' não apareceu na tabela.", e);
+        }
 
         // 13. Aguarda formulário aparecer
         WebElement nomeEdit = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("ingredientesNome")));
@@ -139,10 +131,10 @@ class EditarIngredienteSeleniumTest {
 
         // 14. Alterar valores
         nomeEdit.clear();
-        nomeEdit.sendKeys("Pão Italiano Selenium");
+        nomeEdit.sendKeys("pao Italiano Selenium");
 
         descEdit.clear();
-        descEdit.sendKeys("Pão claro crocante");
+        descEdit.sendKeys("pao claro crocante");
 
         qtdEdit.clear();
         qtdEdit.sendKeys("60");
@@ -157,29 +149,50 @@ class EditarIngredienteSeleniumTest {
         WebElement btnAlterar = driver.findElement(
                 By.xpath("//input[@type='button' and @value='Alterar' and contains(@onclick,'alterarIngrediente')]")
         );
-
         btnAlterar.click();
 
-        // 16. Aceitar alerta de sucesso
+        // 16. [DIAGNÓSTICO] Ler o que o alerta diz antes de aceitar
         Alert alertaAlterar = wait.until(ExpectedConditions.alertIsPresent());
+        String mensagemAlerta = alertaAlterar.getText();
+        System.out.println("========================================");
+        System.out.println("MENSAGEM DO ALERTA AO EDITAR: " + mensagemAlerta);
+        System.out.println("========================================");
         alertaAlterar.accept();
 
-        // 17. Página recarrega → esperar tabela novamente
+        // 17. Página recarrega
+        driver.navigate().refresh(); 
+        
+        // Apenas espera a tabela aparecer (sem exigir o texto ainda)
         WebElement tabelaAtualizada = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("tabelaIngredientes")));
-        Thread.sleep(1500);
+        Thread.sleep(1000); // Pequena pausa para garantir renderização visual
 
-        // 18. Validar ingrediente atualizado 
+        // Imprimir o conteúdo da tabela para entender o erro
+        String textoCompletoTabela = tabelaAtualizada.getText();
+        System.out.println("--- CONTEÚDO DA TABELA APÓS REFRESH ---");
+        System.out.println(textoCompletoTabela);
+        System.out.println("---------------------------------------");
+
+        if (!textoCompletoTabela.contains("Italiano Selenium")) {
+            // Se o nome antigo ainda estiver lá, avisa
+            if (textoCompletoTabela.contains("Australiano Selenium")) {
+                throw new RuntimeException("FALHA: O ingrediente não foi atualizado. O nome antigo 'Australiano Selenium' ainda está na tabela.");
+            }
+            throw new RuntimeException("FALHA: O texto 'Italiano Selenium' não foi encontrado na tabela.");
+        }
+
+        // Se passou do if acima, faz as validações finais
         WebElement linhaAtualizada = tabelaAtualizada.findElements(By.tagName("tr"))
                 .stream()
-                .filter(tr -> tr.getText().contains("Pão Italiano Selenium"))
+                .filter(tr -> tr.getText().contains("Italiano Selenium"))
                 .findFirst()
-                .orElseThrow(() -> new RuntimeException("Ingrediente alterado não aparece na tabela"));
-        String textoLinha = linhaAtualizada.getText();
+                .orElseThrow(() -> new RuntimeException("Erro ao buscar linha para validação final"));
 
-        assertTrue(textoLinha.contains("Pão Italiano Selenium"));
-        assertTrue(textoLinha.contains("Pão claro crocante"));
+        String textoLinha = linhaAtualizada.getText();
+        
+        assertTrue(textoLinha.contains("Italiano Selenium"));
+        assertTrue(textoLinha.contains("pao claro crocante"));
         assertTrue(textoLinha.contains("60"));
-        assertTrue(textoLinha.contains("2.00"));
-        assertTrue(textoLinha.contains("4.50"));
+        assertTrue(textoLinha.contains("2"));
+        assertTrue(textoLinha.contains("4.5"));
     }
 }

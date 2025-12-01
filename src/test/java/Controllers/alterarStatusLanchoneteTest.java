@@ -11,6 +11,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 public class alterarStatusLanchoneteTest {
@@ -99,7 +100,31 @@ public class alterarStatusLanchoneteTest {
         assertTrue(responseWriter.toString().contains("\"status\":\"ABERTO\""));
     }
 
-    // 6) JSON malformado → JSONException
+    // 6) "aberto" em minúsculas
+    @Test
+    void deveAceitarAbertoComMinusculas() throws Exception {  // ALTERAÇÃO
+        mockJsonBody("{\"status\":\"aberto\"}");
+
+        controller.processRequest(mockRequest, mockResponse);
+
+        verify(mockDao).alterarStatus("ABERTO");
+        assertTrue(responseWriter.toString().contains("\"status\":\"ABERTO\""));
+    }
+
+
+
+    // 8) troca default "ABERTO" por "FECHADO"
+    @Test
+    void deveUsarAbertoComoDefaultQuandoStatusForVazio() throws Exception { // ALTERAÇÃO
+        mockJsonBody("{\"status\":\"\"}");
+
+        controller.processRequest(mockRequest, mockResponse);
+
+        verify(mockDao).alterarStatus("ABERTO");
+        assertTrue(responseWriter.toString().contains("\"status\":\"ABERTO\""));
+    }
+
+    // 9) JSON malformado 
     @Test
     void deveRetornarErroEmJsonMalformado() throws Exception {
         mockJsonBody("{status:,,,,}");
@@ -110,7 +135,7 @@ public class alterarStatusLanchoneteTest {
         verify(mockDao, never()).alterarStatus(anyString());
     }
 
-    // 7) JSON vazio
+    // 10) JSON vazio
     @Test
     void deveRetornarErroJsonVazio() throws Exception {
         mockJsonBody("");
@@ -121,7 +146,7 @@ public class alterarStatusLanchoneteTest {
         verify(mockDao, never()).alterarStatus(anyString());
     }
 
-    // 8) JSON nulo → request sem corpo
+    // 11) JSON nulo → request sem corpo
     @Test
     void deveRetornarErroQuandoJsonForNulo() throws Exception {
         when(mockRequest.getReader()).thenReturn(null);
@@ -131,4 +156,42 @@ public class alterarStatusLanchoneteTest {
         assertTrue(responseWriter.toString().contains("Status inválido"));
         verify(mockDao, never()).alterarStatus(anyString());
     }
+
+
+    @Test
+    void deveTratarStatusDeTipoIncorretoComoInvalido() throws Exception {
+        mockJsonBody("{\"status\": 123}");
+
+        controller.processRequest(mockRequest, mockResponse);
+
+        // COMO cai no catch(JSONException), NÃO deve chamar o DAO
+        verify(mockDao, never()).alterarStatus(anyString());
+
+        // Resposta deve ser "Status inválido"
+        assertTrue(responseWriter.toString().contains("Status inválido"));
+    }
+
+    @Test
+    void deveRetornarErroQuandoJsonContemApenasEspacos() throws Exception {
+        mockJsonBody("     ");
+
+        controller.processRequest(mockRequest, mockResponse);
+
+        verify(mockDao, never()).alterarStatus(anyString());
+        assertTrue(responseWriter.toString().contains("Status inválido"));
+    }
+
+
+    @Test
+    void deveRetornarErroQuandoReadLineRetornaNulo() throws Exception {
+        BufferedReader br = new BufferedReader(new StringReader(""));
+        when(mockRequest.getReader()).thenReturn(br);
+
+        controller.processRequest(mockRequest, mockResponse);
+
+        verify(mockDao, never()).alterarStatus(anyString());
+        assertTrue(responseWriter.toString().contains("Status inválido"));
+    }
+
+
 }

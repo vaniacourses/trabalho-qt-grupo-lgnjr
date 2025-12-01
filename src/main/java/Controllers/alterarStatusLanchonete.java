@@ -9,20 +9,18 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.json.JSONException;
 import org.json.JSONObject;
+
 public class alterarStatusLanchonete extends HttpServlet {
+
    private DaoStatusLanchonete dao;
-   // ====================================================================
-   // 1. CONSTRUTOR PADRÃO (Essencial para o Servidor/Site funcionar)
-   // ====================================================================
    public alterarStatusLanchonete() {
        this.dao = new DaoStatusLanchonete();
    }
-   // ====================================================================
-   // 2. CONSTRUTOR PARA TESTES (Essencial para injetar o Mock)
-   // ====================================================================
+   
    public alterarStatusLanchonete(DaoStatusLanchonete mockDao) {
        this.dao = mockDao;
    }
+
    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
            throws ServletException, IOException {
       
@@ -36,15 +34,14 @@ public class alterarStatusLanchonete extends HttpServlet {
        if (request != null) {
            br = request.getReader();
        }
-       // --- CORREÇÃO AQUI: A variável precisa ser criada fora do IF ---
+       
        String json = null;
       
        // Verificação defensiva do buffer (+1)
        if (br != null) {
            json = br.readLine();
        }
-       // ---------------------------------------------------------------
-       // Ponto de decisão principal
+       
        if (json != null) { // (+1)
           
            // Verificação extra de string vazia (+1)
