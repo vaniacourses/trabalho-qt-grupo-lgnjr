@@ -108,15 +108,24 @@ class EditarIngredienteSeleniumTest {
 
         // 10. Esperar tabela de ingredientes carregar
         WebElement tabela = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("tabelaIngredientes")));
-        wait.until(driver -> tabela.findElements(By.tagName("tr")).size() > 1);
+        wait.until(ExpectedConditions.numberOfElementsToBeMoreThan(
+                By.cssSelector("#tabelaIngredientes tr"),
+                1
+        ));
+
 
         // 11. Encontrar a linha do ingrediente pelo texto
-        WebElement linhaIngrediente = tabela.findElements(By.tagName("tr"))
-                .stream()
-                .filter(tr -> tr.getText().contains("Pão Australiano Selenium"))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("Ingrediente não encontrado na tabela"));
+        wait.until(ExpectedConditions.textToBePresentInElementLocated(
+                By.id("tabelaIngredientes"),
+                "Pão Australiano Selenium"
+        ));
 
+        WebElement linhaIngrediente = tabela.findElements(By.tagName("tr"))
+            .stream()
+            .filter(tr -> tr.getText().contains("Pão Australiano Selenium"))
+            .findFirst()
+            .get();
+            
         // 12. Clicar exatamente na célula do NOME (2ª coluna)
         WebElement celulaNome = linhaIngrediente.findElements(By.tagName("td")).get(1);
         celulaNome.click();
@@ -156,16 +165,15 @@ class EditarIngredienteSeleniumTest {
         alertaAlterar.accept();
 
         // 17. Página recarrega → esperar tabela novamente
-        tabela = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("tabelaIngredientes")));
+        WebElement tabelaAtualizada = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("tabelaIngredientes")));
         Thread.sleep(1500);
 
-        // 18. Validar ingrediente atualizado
-        WebElement linhaAtualizada = tabela.findElements(By.tagName("tr"))
+        // 18. Validar ingrediente atualizado 
+        WebElement linhaAtualizada = tabelaAtualizada.findElements(By.tagName("tr"))
                 .stream()
                 .filter(tr -> tr.getText().contains("Pão Italiano Selenium"))
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Ingrediente alterado não aparece na tabela"));
-
         String textoLinha = linhaAtualizada.getText();
 
         assertTrue(textoLinha.contains("Pão Italiano Selenium"));
