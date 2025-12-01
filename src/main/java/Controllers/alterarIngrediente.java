@@ -88,7 +88,7 @@ public class alterarIngrediente extends HttpServlet {
         }
     }
     
-    // --- MÉTODOS AUXILIARES E HOOKS ---
+    //  MÉTODOS AUXILIARES E HOOKS ---
     
     // Método para erro padronizado
     private void enviarErro(HttpServletResponse response, String mensagem) throws IOException {

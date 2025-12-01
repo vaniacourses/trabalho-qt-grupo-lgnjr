@@ -19,10 +19,13 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+/**
+ * Testes UNITÁRIOS da servlet alterarIngrediente.
+ */
 public class alterarIngredienteTest {
 
     @Mock HttpServletRequest request;
@@ -34,125 +37,253 @@ public class alterarIngredienteTest {
     void iniciar() {
         MockitoAnnotations.openMocks(this);
     }
-    
-    // Helper para simular o corpo da requisição JSON
+
+    // Helper para simular InputStream com JSON
     private void mockInputStream(String json) throws IOException {
         ByteArrayInputStream bais = new ByteArrayInputStream(json.getBytes());
         ServletInputStream servletInputStream = new ServletInputStream() {
-            public int read() throws IOException { return bais.read(); }
+            @Override
+            public int read() { return bais.read(); }
+            @Override
             public boolean isFinished() { return bais.available() == 0; }
+            @Override
             public boolean isReady() { return true; }
+            @Override
             public void setReadListener(ReadListener readListener) {}
         };
         when(request.getInputStream()).thenReturn(servletInputStream);
     }
-    
-    // Subclasse que injeta os mocks (Garantindo Isolamento)
+
+    // Subclasse para injetar mocks
     class AlterarIngredienteControlado extends alterarIngrediente {
         @Override protected ValidadorCookie getValidadorCookie() { return validadorMock; }
         @Override protected DaoIngrediente getDaoIngrediente() { return daoIngredienteMock; }
     }
 
-
-    // 1. TESTE  FELIZ
-    
+    //  1. FLUXO FELIZ
     @Test
     void testeAlteracao_ComDadosValidos_DeveChamarAlterarDAO() throws Exception {
-        // Cenário: Login de funcionário autorizado
+
         when(validadorMock.validarFuncionario(any())).thenReturn(true);
-        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("auth", "ok")});
-        
-        // JSON de entrada com todos os dados preenchidos corretamente
-        String jsonInput = "{\"id\": 15, \"nome\": \"Pao Frances\", \"descricao\": \"Pao fresquinho\", \"quantidade\": 10, \"ValorCompra\": 0.50, \"ValorVenda\": 1.00, \"tipo\": \"PAO\"}";
+        when(request.getCookies()).thenReturn(new Cookie[]{ new Cookie("auth", "ok") });
+
+        String jsonInput =
+                "{\"id\": 15, \"nome\": \"Pao Frances\", \"descricao\": \"Pao fresquinho\", " +
+                        "\"quantidade\": 10, \"ValorCompra\": 0.50, \"ValorVenda\": 1.00, \"tipo\": \"PAO\"}";
+
         mockInputStream(jsonInput);
 
-        // Captura a saída
         StringWriter sw = new StringWriter();
         when(response.getWriter()).thenReturn(new PrintWriter(sw));
 
-        // Execução
         alterarIngrediente servlet = new AlterarIngredienteControlado();
         servlet.processRequest(request, response);
 
-        // Verificação: 
-        // 1. Deve retornar a mensagem de sucesso
-        assertTrue(sw.toString().contains("Ingrediente Alterado!"), "Deveria retornar mensagem de sucesso.");
-        // 2. Deve chamar o método DAO.alterar() exatamente uma vez
-        verify(daoIngredienteMock, times(1)).alterar(any(Ingrediente.class));
-        
-        // 3.  Captura o objeto para verificar se o ID foi passado corretamente
+        // Verifica cabeçalhos (mata mutantes 25,26)
+        verify(response).setContentType("application/json");
+        verify(response).setCharacterEncoding("UTF-8");
+
+        // Resposta deve conter a frase de sucesso
+        assertTrue(sw.toString().contains("Ingrediente Alterado!"));
+
+        // Captura o Ingrediente enviado para o DAO
         ArgumentCaptor<Ingrediente> captor = ArgumentCaptor.forClass(Ingrediente.class);
-        verify(daoIngredienteMock).alterar(captor.capture());
-        assertTrue(captor.getValue().getId_ingrediente() == 15, "O ID do ingrediente não foi extraído corretamente do JSON.");
+        verify(daoIngredienteMock, times(1)).alterar(captor.capture());
+
+        Ingrediente ing = captor.getValue();
+
+        // Verificações completas (matam mutantes 66–72)
+        assertEquals(15, ing.getId_ingrediente());
+        assertEquals("Pao Frances", ing.getNome());
+        assertEquals("Pao fresquinho", ing.getDescricao());
+        assertEquals(10, ing.getQuantidade());
+        assertEquals(0.50, ing.getValor_compra());
+        assertEquals(1.00, ing.getValor_venda());
+        assertEquals("PAO", ing.getTipo());
+        assertEquals(1, ing.getFg_ativo());
     }
 
-    //  2. TESTE DE FLUXO DE FALHA: AUTENTICAÇÃO 
-    
+    //  2. Autenticação inválida
     @Test
     void testeAlteracao_SemAutenticacao_DeveRetornarErro() throws Exception {
-        // Cenário: Cookie é inválido
+
         when(validadorMock.validarFuncionario(any())).thenReturn(false);
-        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("auth", "bad")});
-        
-        // JSON Válido para garantir que a falha não é no JSON
-        mockInputStream("{\"id\": 15, \"nome\": \"Pao\"}");
+        when(request.getCookies()).thenReturn(new Cookie[]{ new Cookie("auth", "bad") });
+
+        mockInputStream("{\"id\": 15}");
 
         StringWriter sw = new StringWriter();
         when(response.getWriter()).thenReturn(new PrintWriter(sw));
 
-        // Execução
         alterarIngrediente servlet = new AlterarIngredienteControlado();
         servlet.processRequest(request, response);
 
-        // Verificação: Deve retornar o erro de não autorizado e NÃO deve chamar o DAO
-        assertTrue(sw.toString().contains("Não autorizado"), "Deveria retornar erro de não autorizado.");
+        assertTrue(sw.toString().contains("Não autorizado"));
         verify(daoIngredienteMock, never()).alterar(any());
+        verify(response).setStatus(HttpServletResponse.SC_BAD_REQUEST);
     }
-    
-    // 3. TESTE DE FALHA: DADOS INVÁLIDOS (JSON/TIPO)
 
+    // 3. ID com letras
     @Test
     void testeAlteracao_ComLetrasNoID_DeveRetornarErro() throws Exception {
-        // Cenário: Tentativa de alterar com letras no campo ID (que é int)
+
         when(validadorMock.validarFuncionario(any())).thenReturn(true);
-        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("auth", "ok")});
-        
-        // ID inválido no JSON - Isso força o JSONException no .getInt("id")
-        String jsonInput = "{\"id\": \"ABC\", \"nome\": \"Pao\"}";
-        mockInputStream(jsonInput); 
+        when(request.getCookies()).thenReturn(new Cookie[]{ new Cookie("auth", "ok") });
+
+        mockInputStream("{\"id\":\"ABC\", \"nome\":\"X\"}");
 
         StringWriter sw = new StringWriter();
         when(response.getWriter()).thenReturn(new PrintWriter(sw));
 
-        // Execução
         alterarIngrediente servlet = new AlterarIngredienteControlado();
         servlet.processRequest(request, response);
 
-        // Verificação: Deve cair no catch(JSONException) e retornar erro
-        assertTrue(sw.toString().contains("Erro no formato dos dados"), "Deveria retornar erro por formato numérico inválido.");
+        assertTrue(sw.toString().contains("Erro no formato"));
         verify(daoIngredienteMock, never()).alterar(any());
+        verify(response).setStatus(HttpServletResponse.SC_BAD_REQUEST);
     }
-    
-    //  4. TESTE DE FALHA: REQUISIÇÃO VAZIA
 
+    // 4. JSON vazio 
     @Test
     void testeAlteracao_ComJsonNuloOuVazio_DeveRetornarErro() throws Exception {
-        // Cenário: Autorizado, mas o corpo da requisição está vazio
+
         when(validadorMock.validarFuncionario(any())).thenReturn(true);
-        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("auth", "ok")});
-        
-        // Simula JSON vazio (br.readLine() retorna null ou string vazia)
-        mockInputStream(" "); 
+        when(request.getCookies()).thenReturn(new Cookie[]{ new Cookie("auth", "ok") });
+
+        mockInputStream(" ");
 
         StringWriter sw = new StringWriter();
         when(response.getWriter()).thenReturn(new PrintWriter(sw));
 
-        // Execução
         alterarIngrediente servlet = new AlterarIngredienteControlado();
         servlet.processRequest(request, response);
 
-        // Verificação: Deve retornar o erro de dados ausentes
-        assertTrue(sw.toString().contains("Dados ausentes"), "Deveria retornar erro por falta de dados.");
+        assertTrue(sw.toString().contains("Dados ausentes"));
         verify(daoIngredienteMock, never()).alterar(any());
+        verify(response).setStatus(HttpServletResponse.SC_BAD_REQUEST);
+    }
+
+    // 5. InputStream nulo 
+    @Test
+    void testeAlteracao_SemInputStream_MesmoAutorizado_DeveRetornarErro() throws Exception {
+
+        when(request.getCookies()).thenReturn(new Cookie[]{ new Cookie("auth", "ok") });
+        when(validadorMock.validarFuncionario(any())).thenReturn(true);
+
+        when(request.getInputStream()).thenReturn(null);
+
+        StringWriter sw = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(sw));
+
+        alterarIngrediente servlet = new AlterarIngredienteControlado();
+        servlet.processRequest(request, response);
+
+        assertTrue(sw.toString().contains("Não autorizado"));
+        verify(daoIngredienteMock, never()).alterar(any());
+        verify(response).setStatus(HttpServletResponse.SC_BAD_REQUEST);
+    }
+
+    // 6. Cookies nulos 
+    @Test
+    void testeAlteracao_SemCookies_DeveRetornarNaoAutorizado() throws Exception {
+
+        when(request.getCookies()).thenReturn(null);
+        when(validadorMock.validarFuncionario(any())).thenReturn(true);
+
+        mockInputStream("{\"id\": 1}");
+
+        StringWriter sw = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(sw));
+
+        alterarIngrediente servlet = new AlterarIngredienteControlado();
+        servlet.processRequest(request, response);
+
+        assertTrue(sw.toString().contains("Não autorizado"));
+        verify(daoIngredienteMock, never()).alterar(any());
+        verify(response).setStatus(HttpServletResponse.SC_BAD_REQUEST);
+    }
+
+    // 7. Validador nulo 
+    @Test
+    void testeAlteracao_ValidadorNulo_DeveRetornarNaoAutorizado() throws Exception {
+
+        when(request.getCookies()).thenReturn(new Cookie[]{ new Cookie("auth", "ok") });
+
+        mockInputStream("{\"id\":1, \"nome\":\"X\"}");
+
+        StringWriter sw = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(sw));
+
+        alterarIngrediente servlet = new alterarIngrediente() {
+            @Override protected ValidadorCookie getValidadorCookie() { return null; }
+            @Override protected DaoIngrediente getDaoIngrediente() { return daoIngredienteMock; }
+        };
+
+        servlet.processRequest(request, response);
+
+        assertTrue(sw.toString().contains("Não autorizado"));
+        verify(daoIngredienteMock, never()).alterar(any());
+        verify(response).setStatus(HttpServletResponse.SC_BAD_REQUEST);
+    }
+
+    // 8. Validador lança NPE 
+    @Test
+    void testeAlteracao_ValidadorLancaNullPointer_DeveRetornarNaoAutorizado() throws Exception {
+
+        Cookie[] cookies = { new Cookie("auth", "ok") };
+        when(request.getCookies()).thenReturn(cookies);
+        when(validadorMock.validarFuncionario(cookies))
+                .thenThrow(new NullPointerException("falha simulada"));
+
+        mockInputStream("{\"id\": 1, \"nome\": \"Teste\"}");
+
+        StringWriter sw = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(sw));
+
+        alterarIngrediente servlet = new AlterarIngredienteControlado();
+        servlet.processRequest(request, response);
+
+        assertTrue(sw.toString().contains("Não autorizado"));
+        verify(daoIngredienteMock, never()).alterar(any());
+        verify(response).setStatus(HttpServletResponse.SC_BAD_REQUEST);
+    }
+
+    //  9. doPost delega para processRequest 
+    @Test
+    void testeDoPost_DeveDelegarParaProcessRequest_FluxoFeliz() throws Exception {
+
+        when(validadorMock.validarFuncionario(any())).thenReturn(true);
+        when(request.getCookies()).thenReturn(new Cookie[]{ new Cookie("auth", "ok") });
+
+        mockInputStream("{\"id\": 2, \"nome\": \"Teste Post\", \"descricao\": \"Desc\", \"quantidade\": 3, \"ValorCompra\": 1.0, \"ValorVenda\": 2.0, \"tipo\": \"TIPO\"}");
+
+        StringWriter sw = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(sw));
+
+        alterarIngrediente servlet = new AlterarIngredienteControlado();
+        servlet.doPost(request, response);
+
+        verify(daoIngredienteMock).alterar(any());
+        assertTrue(sw.toString().contains("Ingrediente Alterado!"));
+    }
+
+    // 10. doGet delega para processRequest
+    @Test
+    void testeDoGet_DeveDelegarParaProcessRequest_ErroAutenticacao() throws Exception {
+
+        when(validadorMock.validarFuncionario(any())).thenReturn(false);
+        when(request.getCookies()).thenReturn(new Cookie[]{ new Cookie("auth", "bad") });
+
+        mockInputStream("{\"id\": 3}");
+
+        StringWriter sw = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(sw));
+
+        alterarIngrediente servlet = new AlterarIngredienteControlado();
+        servlet.doGet(request, response);
+
+        verify(daoIngredienteMock, never()).alterar(any());
+        assertTrue(sw.toString().contains("Não autorizado"));
+        verify(response).setStatus(HttpServletResponse.SC_BAD_REQUEST);
     }
 }
