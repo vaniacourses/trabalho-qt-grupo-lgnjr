@@ -42,8 +42,7 @@ import Model.Pedido;
 
 public class comprarTest {
 
-//métodos auxiliares
-    
+    // ----------------- MÉTODO AUXILIAR PARA MOCKAR O INPUT STREAM -----------------
     private void mockInputStream(HttpServletRequest req, String json) throws IOException {
         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(json.getBytes());
         ServletInputStream servletInputStream = new ServletInputStream() {
@@ -55,15 +54,14 @@ public class comprarTest {
         when(req.getInputStream()).thenReturn(servletInputStream);
     }
 
-    // Wrapper para injetar Mocks nos testes de lógica principal
-    public class comprarParaTesteUnitario extends comprar {
+    // ----------------- WRAPPER PARA TESTE UNITÁRIO -----------------
+    public class comprarParaTesteUnitario extends Comprar {
         ValidadorCookie validadorMock;
         DaoPedido daoPedidoMock;
         DaoCliente daoClienteMock;
         DaoLanche daoLancheMock; 
         DaoBebida daoBebidaMock; 
 
-        // Construtor principal
         public comprarParaTesteUnitario(ValidadorCookie v, DaoPedido dp, DaoCliente dc, DaoLanche dl, DaoBebida db) {
             this.validadorMock = v;
             this.daoPedidoMock = dp;
@@ -79,12 +77,9 @@ public class comprarTest {
         @Override protected DaoBebida getDaoBebida() { return daoBebidaMock != null ? daoBebidaMock : mock(DaoBebida.class); }
     }
 
-    //testes de lógica
-    
+    // ----------------- TESTE UNITÁRIO: FLUXO SIMPLES -----------------
     @Test
     public void UNITARIO_testeFluxoSimples_VerificaSetters() throws Exception {
-        //matando os mutantes
-        
         HttpServletRequest request = mock(HttpServletRequest.class);
         HttpServletResponse response = mock(HttpServletResponse.class);
         ValidadorCookie validador = mock(ValidadorCookie.class);
@@ -93,7 +88,7 @@ public class comprarTest {
 
         when(validador.validar(any())).thenReturn(true);
         when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("teste", "teste")});
-        
+
         Cliente clienteFake = new Cliente();
         clienteFake.setId_cliente(99); 
         when(daoCliente.pesquisaPorID(anyString())).thenReturn(clienteFake);
@@ -101,28 +96,23 @@ public class comprarTest {
         mockInputStream(request, "{\"id\": 99}");
         when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
 
-        // Instancia com mocks básicos
-        comprar servlet = new comprarParaTesteUnitario(validador, daoPedido, daoCliente, null, null);
+        Comprar servlet = new comprarParaTesteUnitario(validador, daoPedido, daoCliente, null, null);
         servlet.processRequest(request, response);
 
-        // 1. Verifica se setCharacterEncoding foi chamado (Mata VoidMethodCallMutator)
         verify(response).setCharacterEncoding("UTF-8");
         verify(response).setContentType("application/json");
 
-        // 2. Verifica se o Cliente foi setado corretamente no Pedido antes de salvar
-        // (Mata VoidMethodCallMutator em pedido.setCliente)
         ArgumentCaptor<Pedido> pedidoCaptor = ArgumentCaptor.forClass(Pedido.class);
         verify(daoPedido).salvar(pedidoCaptor.capture());
         
         Pedido pedidoCapturado = pedidoCaptor.getValue();
-        assertNotNull(pedidoCapturado.getCliente(), "Cliente não pode ser null no pedido");
-        assertEquals(99, pedidoCapturado.getCliente().getId_cliente(), "ID do cliente incorreto no pedido");
+        assertNotNull(pedidoCapturado.getCliente());
+        assertEquals(99, pedidoCapturado.getCliente().getId_cliente());
     }
-    
+
+    // ----------------- TESTE UNITÁRIO: CÁLCULOS -----------------
     @Test
     public void UNITARIO_testeCalculos_E_AtribuicaoQuantidade() throws Exception {
-        // matar mutantes de Matemática (MathMutator) e VoidMethodCall (setQuantidade)
-        
         HttpServletRequest request = mock(HttpServletRequest.class);
         HttpServletResponse response = mock(HttpServletResponse.class);
         ValidadorCookie validador = mock(ValidadorCookie.class);
@@ -131,12 +121,10 @@ public class comprarTest {
         DaoLanche daoLanche = mock(DaoLanche.class);
         DaoBebida daoBebida = mock(DaoBebida.class);
 
-        // sucesso
         when(validador.validar(any())).thenReturn(true);
         when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("auth", "ok")});
         when(daoCliente.pesquisaPorID(anyString())).thenReturn(new Cliente());
 
-        // Configuração Produtos
         Lanche lancheFake = new Lanche();
         lancheFake.setValor_venda(10.0);
         when(daoLanche.pesquisaPorNome("Burguer")).thenReturn(lancheFake);
@@ -149,37 +137,27 @@ public class comprarTest {
         pedidoSalvo.setId_pedido(123); 
         when(daoPedido.pesquisaPorData(any(Pedido.class))).thenReturn(pedidoSalvo);
 
-        // JSON: 3 Burguers (3 * 10 = 30) + 2 Refris (2 * 5 = 10) = Total 40
-        String jsonInput = "{" +
-                "\"id\": 1," +
-                "\"Burguer\": [\"desc\", \"lanche\", 3]," + 
-                "\"Refri\": [\"desc\", \"bebida\", 2]" +        
-                "}";
+        String jsonInput = "{\"id\": 1,\"Burguer\": [\"desc\", \"lanche\", 3],\"Refri\": [\"desc\", \"bebida\", 2]}";
         mockInputStream(request, jsonInput);
         when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
 
-        comprar servlet = new comprarParaTesteUnitario(validador, daoPedido, daoCliente, daoLanche, daoBebida);
+        Comprar servlet = new comprarParaTesteUnitario(validador, daoPedido, daoCliente, daoLanche, daoBebida);
         servlet.processRequest(request, response);
 
-        // 1. Validar Cálculo Matemático (Mata MathMutator)
         ArgumentCaptor<Pedido> pedidoCaptor = ArgumentCaptor.forClass(Pedido.class);
         verify(daoPedido).salvar(pedidoCaptor.capture());
-        assertEquals(40.0, pedidoCaptor.getValue().getValor_total(), 0.01, "Erro no cálculo do valor total");
+        assertEquals(40.0, pedidoCaptor.getValue().getValor_total(), 0.01);
 
-        // 2. Validar se setQuantidade foi chamado no LANCHE (Mata VoidMethodCallMutator)
-       
         ArgumentCaptor<Lanche> lancheCaptor = ArgumentCaptor.forClass(Lanche.class);
         verify(daoPedido).vincularLanche(eq(pedidoSalvo), lancheCaptor.capture());
-        
-        // Assert que a quantidade dentro do objeto é 3 (vinda do JSON)
-        assertEquals(3, lancheCaptor.getValue().getQuantidade(), "Quantidade do lanche não foi setada corretamente");
+        assertEquals(3, lancheCaptor.getValue().getQuantidade());
 
-        // 3. Validar se setQuantidade foi chamado na BEBIDA
         ArgumentCaptor<Bebida> bebidaCaptor = ArgumentCaptor.forClass(Bebida.class);
         verify(daoPedido).vincularBebida(eq(pedidoSalvo), bebidaCaptor.capture());
-        assertEquals(2, bebidaCaptor.getValue().getQuantidade(), "Quantidade da bebida não foi setada corretamente");
+        assertEquals(2, bebidaCaptor.getValue().getQuantidade());
     }
-    
+
+    // ----------------- TESTE UNITÁRIO: COOKIE INVÁLIDO -----------------
     @Test
     public void UNITARIO_testeErro_CookieInvalido() throws Exception {
         HttpServletRequest request = mock(HttpServletRequest.class);
@@ -188,17 +166,15 @@ public class comprarTest {
 
         when(validador.validar(any())).thenReturn(false); 
         when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("auth", "mock")});
-        
+
         mockInputStream(request, "{}");
         StringWriter sw = new StringWriter();
         when(response.getWriter()).thenReturn(new PrintWriter(sw));
 
-        comprar servlet = new comprarParaTesteUnitario(validador, null, null, null, null);
+        Comprar servlet = new comprarParaTesteUnitario(validador, null, null, null, null);
         servlet.processRequest(request, response);
 
-        // Verifica saída de erro
         assertTrue(sw.toString().trim().contains("erro"));
-        
     }
 
     // cobertura de metodos
@@ -208,7 +184,7 @@ public class comprarTest {
         // testa se os métodos getDao...() retornam instâncias válidas
        
         
-        comprar servletReal = new comprar();
+        Comprar servletReal = new Comprar();
         
         // 1. ValidadorCookie
         assertNotNull(servletReal.getValidadorCookie(), "getValidadorCookie() não deve retornar null");
@@ -250,7 +226,7 @@ public class comprarTest {
         StringWriter sw = new StringWriter();
         when(response.getWriter()).thenReturn(new PrintWriter(sw));
 
-        comprar servlet = new comprarParaTesteUnitario(validador, null, null, null, null);
+        Comprar servlet = new comprarParaTesteUnitario(validador, null, null, null, null);
         servlet.processRequest(request, response);
 
         assertTrue(sw.toString().trim().contains("erro"));
@@ -285,7 +261,7 @@ public class comprarTest {
         mockInputStream(request, jsonInput);
         when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
 
-        comprar servlet = new comprarParaTesteUnitario(validador, daoPedido, daoCliente, daoLanche, daoBebida);
+        Comprar servlet = new comprarParaTesteUnitario(validador, daoPedido, daoCliente, daoLanche, daoBebida);
         servlet.processRequest(request, response);
 
         // Verifica que NADA foi vinculado (pois tudo era inválido)
@@ -315,7 +291,7 @@ public class comprarTest {
         mockInputStream(request, "{\"id\": 1}");
         when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
 
-        comprar servlet = new comprarParaTesteUnitario(validador, daoPedido, daoCliente, null, null);
+        Comprar servlet = new comprarParaTesteUnitario(validador, daoPedido, daoCliente, null, null);
         servlet.processRequest(request, response);
 
         verify(daoPedido).salvar(any(Pedido.class));
@@ -331,14 +307,14 @@ public class comprarTest {
         when(validador.validar(any())).thenReturn(false);
         when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
 
-        comprar servlet = new comprarParaTesteUnitario(validador, null, null, null, null);
+        Comprar servlet = new comprarParaTesteUnitario(validador, null, null, null, null);
         servlet.doPost(request, response);
         verify(request).getCookies();
     }
 
     // integração com banco
     
-    public class comprarParaTesteIntegracao extends comprar {
+    public class comprarParaTesteIntegracao extends Comprar {
         ValidadorCookie validadorMock;
         public comprarParaTesteIntegracao(ValidadorCookie v) { this.validadorMock = v; }
         @Override protected ValidadorCookie getValidadorCookie() { return validadorMock; }
@@ -382,7 +358,7 @@ public class comprarTest {
                 stmtInsert.execute();
             }
 
-            comprar servlet = new comprarParaTesteIntegracao(validador);
+            Comprar servlet = new comprarParaTesteIntegracao(validador);
             servlet.processRequest(request, response);
         }
 
