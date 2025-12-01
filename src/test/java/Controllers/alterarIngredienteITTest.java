@@ -29,7 +29,7 @@ import static org.mockito.Mockito.*;
  * Teste de INTEGRAÇÃO:
  * Servlet alterarIngrediente + DaoIngrediente real + Postgres real.
  */
-class alterarIngredienteIT {
+ public class alterarIngredienteITTest { 
 
     private alterarIngrediente servlet;
     private DaoIngrediente daoReal;
