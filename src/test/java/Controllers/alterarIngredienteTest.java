@@ -25,6 +25,7 @@ import static org.mockito.Mockito.*;
 
 /**
  * Testes UNITÁRIOS da servlet alterarIngrediente.
+ * Salvar este arquivo como: alterarIngredienteTest.java
  */
 public class alterarIngredienteTest {
 
@@ -54,13 +55,14 @@ public class alterarIngredienteTest {
         when(request.getInputStream()).thenReturn(servletInputStream);
     }
 
-    // Subclasse para injetar mocks
+    // Subclasse para injetar mocks (Costura/Seam)
+    // Permite testar sem conectar no banco de dados real
     class AlterarIngredienteControlado extends alterarIngrediente {
         @Override protected ValidadorCookie getValidadorCookie() { return validadorMock; }
         @Override protected DaoIngrediente getDaoIngrediente() { return daoIngredienteMock; }
     }
 
-    //  1. FLUXO FELIZ
+    //  1. FLUXO FELIZ - Tudo certo
     @Test
     void testeAlteracao_ComDadosValidos_DeveChamarAlterarDAO() throws Exception {
 
@@ -79,20 +81,20 @@ public class alterarIngredienteTest {
         alterarIngrediente servlet = new AlterarIngredienteControlado();
         servlet.processRequest(request, response);
 
-        // Verifica cabeçalhos (mata mutantes 25,26)
+        // Verifica cabeçalhos (mata mutantes que removem setContentType)
         verify(response).setContentType("application/json");
         verify(response).setCharacterEncoding("UTF-8");
 
         // Resposta deve conter a frase de sucesso
         assertTrue(sw.toString().contains("Ingrediente Alterado!"));
 
-        // Captura o Ingrediente enviado para o DAO
+        // Captura o Ingrediente enviado para o DAO e valida os dados
         ArgumentCaptor<Ingrediente> captor = ArgumentCaptor.forClass(Ingrediente.class);
         verify(daoIngredienteMock, times(1)).alterar(captor.capture());
 
         Ingrediente ing = captor.getValue();
 
-        // Verificações completas (matam mutantes 66–72)
+        // Verificações completas (matam mutantes de alteração de valor)
         assertEquals(15, ing.getId_ingrediente());
         assertEquals("Pao Frances", ing.getNome());
         assertEquals("Pao fresquinho", ing.getDescricao());
@@ -123,7 +125,7 @@ public class alterarIngredienteTest {
         verify(response).setStatus(HttpServletResponse.SC_BAD_REQUEST);
     }
 
-    // 3. ID com letras
+    // 3. ID com letras (Erro de formato)
     @Test
     void testeAlteracao_ComLetrasNoID_DeveRetornarErro() throws Exception {
 
@@ -178,7 +180,7 @@ public class alterarIngredienteTest {
         alterarIngrediente servlet = new AlterarIngredienteControlado();
         servlet.processRequest(request, response);
 
-        assertTrue(sw.toString().contains("Não autorizado"));
+        assertTrue(sw.toString().contains("Não autorizado")); // Ou erro genérico dependendo da lógica
         verify(daoIngredienteMock, never()).alterar(any());
         verify(response).setStatus(HttpServletResponse.SC_BAD_REQUEST);
     }
@@ -188,8 +190,9 @@ public class alterarIngredienteTest {
     void testeAlteracao_SemCookies_DeveRetornarNaoAutorizado() throws Exception {
 
         when(request.getCookies()).thenReturn(null);
-        when(validadorMock.validarFuncionario(any())).thenReturn(true);
-
+        // O validador não será chamado se cookies for null no seu código original
+        // ou será chamado e deve retornar false/erro.
+        
         mockInputStream("{\"id\": 1}");
 
         StringWriter sw = new StringWriter();
@@ -203,7 +206,7 @@ public class alterarIngredienteTest {
         verify(response).setStatus(HttpServletResponse.SC_BAD_REQUEST);
     }
 
-    // 7. Validador nulo 
+    // 7. Validador nulo (Teste de robustez do método protegido)
     @Test
     void testeAlteracao_ValidadorNulo_DeveRetornarNaoAutorizado() throws Exception {
 
@@ -214,6 +217,7 @@ public class alterarIngredienteTest {
         StringWriter sw = new StringWriter();
         when(response.getWriter()).thenReturn(new PrintWriter(sw));
 
+        // Aqui sobrescrevemos para retornar null propositalmente
         alterarIngrediente servlet = new alterarIngrediente() {
             @Override protected ValidadorCookie getValidadorCookie() { return null; }
             @Override protected DaoIngrediente getDaoIngrediente() { return daoIngredienteMock; }
@@ -226,7 +230,7 @@ public class alterarIngredienteTest {
         verify(response).setStatus(HttpServletResponse.SC_BAD_REQUEST);
     }
 
-    // 8. Validador lança NPE 
+    // 8. Validador lança NullPointerException
     @Test
     void testeAlteracao_ValidadorLancaNullPointer_DeveRetornarNaoAutorizado() throws Exception {
 

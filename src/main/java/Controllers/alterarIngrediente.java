@@ -1,3 +1,8 @@
+
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
 package Controllers;
 
 import DAO.DaoIngrediente;
@@ -14,54 +19,64 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.json.JSONException;
+import org.json.JSONException; // Importante para o catch
 import org.json.JSONObject;
 
+/**
+ *
+ * @author kener_000
+ */
 public class alterarIngrediente extends HttpServlet {
 
+    /**
+     * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
+     * methods.
+     */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         
-        // Proteção para evitar NullPointer
+        // Proteção contra NullPointer no getInputStream (útil para testes)
         BufferedReader br = null;
         if (request.getInputStream() != null) {
             br = new BufferedReader(new InputStreamReader(request.getInputStream()));
         }
         
         String json = "";
+        
+        ////////Validar Cookie
         boolean resultado = false;
         
-        // --- VALIDAÇÃO DE COOKIE ---
         try{
             Cookie[] cookies = request.getCookies();
-            ValidadorCookie validar = getValidadorCookie(); // <--- HOOK
+            // REFATORAÇÃO 1: Usar o método getter em vez de 'new' direto
+            ValidadorCookie validar = getValidadorCookie(); 
             
-            if (cookies != null && validar != null) {
-                 resultado = validar.validarFuncionario(cookies);
+            if (validar != null) {
+                resultado = validar.validarFuncionario(cookies);
             }
-        }catch(java.lang.NullPointerException e){}
+        } catch(java.lang.NullPointerException e){}
+        //////////////
         
-        // -
         if ((br != null) && resultado) {
             try {
                 json = br.readLine();
                 
-                // Vaidação de segurançal
+                // Validação extra caso o json venha nulo ou vazio
                 if (json == null || json.trim().isEmpty()) {
-                    enviarErro(response, "Dados ausentes.");
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    try (PrintWriter out = response.getWriter()) { out.println("Dados ausentes"); }
                     return;
                 }
-                
-                byte[] bytes = json.getBytes(ISO_8859_1);
-                String jsonStr = new String(bytes, UTF_8);
+
+                byte[] bytes = json.getBytes(ISO_8859_1); 
+                String jsonStr = new String(bytes, UTF_8);            
                 JSONObject dados = new JSONObject(jsonStr);
                 
-                // CRÍTICO: Conversão de tipos. Se 'quantidade' ou 'id' tiverem letras,
-                // o org.json lança JSONException, capturada abaixo.
                 Ingrediente ingrediente = new Ingrediente();
+                // Conversões podem lançar JSONException se o formato estiver errado
                 ingrediente.setId_ingrediente(dados.getInt("id"));
                 ingrediente.setNome(dados.getString("nome"));
                 ingrediente.setDescricao(dados.getString("descricao"));
@@ -71,38 +86,57 @@ public class alterarIngrediente extends HttpServlet {
                 ingrediente.setTipo(dados.getString("tipo"));
                 ingrediente.setFg_ativo(1);
                 
-                DaoIngrediente ingredienteDAO = getDaoIngrediente(); // <--- HOOK
+                // REFATORAÇÃO 2: Usar o método getter em vez de 'new' direto
+                DaoIngrediente ingredienteDAO = getDaoIngrediente();
                 ingredienteDAO.alterar(ingrediente);
                 
                 try (PrintWriter out = response.getWriter()) {
                     out.println("Ingrediente Alterado!");
                 }
-                
-            } catch (JSONException e) {
-                // Captura erro de parse ou erro de conversão numérica
-                enviarErro(response, "Erro no formato dos dados: verifique ID, quantidade e valores.");
-                return;
+            } catch (JSONException | NumberFormatException e) {
+                // Captura erro de formatação (ex: letras no ID)
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                try (PrintWriter out = response.getWriter()) {
+                    out.println("Erro no formato: " + e.getMessage());
+                }
             }
         } else {
-            enviarErro(response, "Não autorizado ou requisição inválida.");
-        }
-    }
-    
-    //  MÉTODOS AUXILIARES E HOOKS ---
-    
-    // Método para erro padronizado
-    private void enviarErro(HttpServletResponse response, String mensagem) throws IOException {
-        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-        try (PrintWriter out = response.getWriter()) {
-            out.println("erro: " + mensagem);
+            // Retorna status de erro (400 ou 401) para facilitar validação no teste
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            try (PrintWriter out = response.getWriter()) {
+                out.println("Não autorizado ou erro");
+            }
         }
     }
 
-    // HOOKS para injeção de dependência
-    protected ValidadorCookie getValidadorCookie() { return new ValidadorCookie(); }
-    protected DaoIngrediente getDaoIngrediente() { return new DaoIngrediente(); }
+    // ==========================================================================
+    // MÉTODOS "SEAM" (COSTURAS) PARA PERMITIR TESTES COM MOCKS
+    // ==========================================================================
+    
+    protected ValidadorCookie getValidadorCookie() {
+        return new ValidadorCookie();
+    }
 
-    @Override protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException { processRequest(request, response); }
-    @Override protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException { processRequest(request, response); }
-    @Override public String getServletInfo() { return "Short description"; }
+    protected DaoIngrediente getDaoIngrediente() {
+        return new DaoIngrediente();
+    }
+
+    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods.">
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        processRequest(request, response);
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        processRequest(request, response);
+    }
+
+    @Override
+    public String getServletInfo() {
+        return "Short description";
+    }
+    // </editor-fold>
 }
