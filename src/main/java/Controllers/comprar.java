@@ -40,7 +40,7 @@ public class comprar extends HttpServlet {
         boolean resultado = false;
         try {
             Cookie[] cookies = request.getCookies();
-            ValidadorCookie validar = getValidadorCookie(); // <--- MUDANÇA AQUI
+            ValidadorCookie validar = getValidadorCookie(); 
             resultado = validar.validar(cookies);
         } catch (java.lang.NullPointerException e) { }
 
@@ -66,23 +66,31 @@ public class comprar extends HttpServlet {
                     // Verifica se é array antes de tentar acessar indices
                      if (dados.optJSONArray(nome) != null) {
                         if(dados.getJSONArray(nome).get(1).equals("lanche")){
-                            DaoLanche lancheDao = getDaoLanche(); // <--- MUDANÇA AQUI
+                            DaoLanche lancheDao = getDaoLanche(); 
                             Lanche lanche = lancheDao.pesquisaPorNome(nome);
                             // Simples validação para evitar NullPointer se o mock retornar null
                             if (lanche != null) { 
                                 int quantidade = dados.getJSONArray(nome).getInt(2);
                                 lanche.setQuantidade(quantidade);
-                                valor_total += lanche.getValor_venda();
+                                
+                                // --- CORREÇÃO APLICADA AQUI ---
+                                valor_total += lanche.getValor_venda() * quantidade;
+                                // ------------------------------
+                                
                                 lanches.add(lanche);
                             }
                         }
                         else if(dados.getJSONArray(nome).get(1).equals("bebida")){
-                            DaoBebida bebidaDao = getDaoBebida(); // <--- MUDANÇA AQUI
+                            DaoBebida bebidaDao = getDaoBebida(); 
                             Bebida bebida = bebidaDao.pesquisaPorNome(nome);
                             if (bebida != null) {
                                 int quantidade = dados.getJSONArray(nome).getInt(2);
                                 bebida.setQuantidade(quantidade);
-                                valor_total += bebida.getValor_venda();
+                                
+                                // --- CORREÇÃO APLICADA AQUI ---
+                                valor_total += bebida.getValor_venda() * quantidade;
+                                // ------------------------------
+                                
                                 bebidas.add(bebida);
                             }
                         }
