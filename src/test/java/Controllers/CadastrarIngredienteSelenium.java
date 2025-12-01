@@ -45,113 +45,97 @@ class CadastrarIngredienteSelenium {
     @Test
     void deveAcessarLoginFuncionarioECadastrarIngrediente() throws InterruptedException {
 
+        
+        // DADOS DO TESTE
+        
         String nomeIngrediente = "Pão Australiano Selenium";
+        String descricao = "Pão escuro delicioso";
+        String quantidade = "50";
+        String valorCompra = "1.50";
+        String valorVenda = "3.00";
+
+       
+        // INÍCIO DO FLUXO
+       
 
         // 1. Acessa Home
         driver.get(BASE_URL + "/view/home/home.html");
         Thread.sleep(2000);
 
-        // 2. Clicar em “Acessar Cardápio”, se existir
-        try {
-            WebElement botao = wait.until(ExpectedConditions.elementToBeClickable(
-                    By.xpath("//button[contains(text(),'Acessar Cardápio')]")));
-            botao.click();
-        } catch (Exception e) {
-            System.out.println("Botão de cardápio não necessário ou não encontrado.");
-        }
+        // 2. Clicar em “Acessar Cardápio” (se existir no fluxo atual)
+        WebElement botaoCardapio = wait.until(ExpectedConditions.elementToBeClickable(
+                By.xpath("//button[contains(text(),'Acessar Cardápio')]")));
+        botaoCardapio.click();
 
-        // 3. Lida com alert inicial (opcional)
-        try {
-            Alert alerta = wait.until(ExpectedConditions.alertIsPresent());
-            alerta.accept();
-        } catch (TimeoutException ignored) {
-        }
+        // 3. Lida com alert inicial (se houver)
+        Alert alertaInicial = wait.until(ExpectedConditions.alertIsPresent());
+        alertaInicial.accept();
 
         // 4. Ir para login de funcionário
-        WebElement carrinho =
-                wait.until(ExpectedConditions.elementToBeClickable(By.linkText("Meu Carrinho")));
+        WebElement carrinho = wait.until(
+                ExpectedConditions.elementToBeClickable(By.linkText("Meu Carrinho")));
         carrinho.click();
 
-        WebElement funcionarioLink =
-                wait.until(ExpectedConditions.elementToBeClickable(By.partialLinkText("Funcionário?")));
+        WebElement funcionarioLink = wait.until(
+                ExpectedConditions.elementToBeClickable(By.partialLinkText("Funcionário?")));
         funcionarioLink.click();
 
-        // 5. Efetuar login (admin/admin)
-        WebElement campoUsuario =
-                wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("loginInput")));
+        // 5. Efetuar login
+        WebElement campoUsuario = wait.until(
+                ExpectedConditions.visibilityOfElementLocated(By.id("loginInput")));
         WebElement campoSenha = driver.findElement(By.id("senhaInput"));
-        WebElement botaoEntrar =
-                driver.findElement(By.xpath("//button[contains(text(),'Entrar')]"));
+        WebElement botaoEntrar = driver.findElement(By.xpath("//button[contains(text(),'Entrar')]"));
 
         campoUsuario.sendKeys("admin");
         campoSenha.sendKeys("admin");
         botaoEntrar.click();
 
         // 6. Acessar Cadastro de Ingredientes
-        WebElement botaoCadIngredientes =
-                wait.until(ExpectedConditions.elementToBeClickable(
-                        By.xpath("//button[contains(text(),'Cadastrar Ingredientes')]")));
+        WebElement botaoCadIngredientes = wait.until(ExpectedConditions.elementToBeClickable(
+                By.xpath("//button[contains(text(),'Cadastrar Ingredientes')]")));
         botaoCadIngredientes.click();
 
         // 7. Preencher formulário
-        WebElement campoNome =
-                wait.until(ExpectedConditions.visibilityOfElementLocated(By.name("nome")));
+        WebElement campoNome = wait.until(
+                ExpectedConditions.visibilityOfElementLocated(By.name("nome")));
         campoNome.sendKeys(nomeIngrediente);
 
         // Select do tipo
-        WebElement selectElement = driver.findElement(By.name("tipo"));
-        Select selectTipo = new Select(selectElement);
-        try {
-            selectTipo.selectByIndex(1);
-        } catch (Exception e) {
-            selectElement.sendKeys(Keys.DOWN);
-        }
+        Select selectTipo = new Select(driver.findElement(By.name("tipo")));
+        selectTipo.selectByIndex(1);
 
         // Quantidade
-        driver.findElement(By.name("quantidade")).sendKeys("50");
+        driver.findElement(By.name("quantidade")).sendKeys(quantidade);
 
         // Valor Compra
         WebElement campoVlrCompra = driver.findElement(By.name("ValorCompra"));
         campoVlrCompra.clear();
-        campoVlrCompra.sendKeys("1.50");
+        campoVlrCompra.sendKeys(valorCompra);
 
         // Valor Venda
         WebElement campoVlrVenda = driver.findElement(By.name("ValorVenda"));
         campoVlrVenda.clear();
-        campoVlrVenda.sendKeys("3.00");
+        campoVlrVenda.sendKeys(valorVenda);
 
         // Descrição
-        try {
-            driver.findElement(By.id("textArea1")).sendKeys("Pão escuro delicioso");
-        } catch (Exception e) {
-            driver.findElement(By.name("TextArea1")).sendKeys("Pão escuro delicioso");
-        }
+        driver.findElement(By.id("textArea1")).sendKeys(descricao);
 
         // 8. Salvar
         WebElement botaoSalvar = driver.findElement(By.name("salvar"));
         botaoSalvar.click();
 
-     // 9. ASSERT principal — verificar mensagem do alert
+        
+        // ASSERT – mensagem do alert
+      
         Alert alertaSucesso = wait.until(ExpectedConditions.alertIsPresent());
-        String textoAlerta = alertaSucesso.getText().trim(); // "Ingrediente Salvo!"
+        String textoAlerta = alertaSucesso.getText().trim();
 
-        assertEquals("Ingrediente Salvo!", textoAlerta,
-                "Mensagem de sucesso do cadastro não corresponde ao esperado.");
-
-        // >>> AQUI ELE CLICA NO OK DO ALERTA <<<
-        alertaSucesso.accept();
-
-        // pequena pausa só pra garantir que a tela "descongela" depois do alert
-        Thread.sleep(1000);
-
-        // 10. Clicar no link ESTOQUE do menu superior
-        WebElement botaoEstoque = wait.until(
-                ExpectedConditions.elementToBeClickable(By.linkText("Estoque"))
+        assertEquals(
+                "Ingrediente Salvo!",
+                textoAlerta,
+                "Mensagem de sucesso do cadastro não corresponde ao esperado."
         );
-        botaoEstoque.click();
 
-        // 11. Pausa pra você visualizar a tela de Estoque
-        Thread.sleep(3000);
-    
+        alertaSucesso.accept();
     }
 }
