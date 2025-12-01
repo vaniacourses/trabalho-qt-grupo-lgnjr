@@ -35,10 +35,9 @@ class salvarLancheSelenium {
         options.addArguments("--remote-allow-origins=*");
 
 
-        driver = new ChromeDriver(options); // Mantendo o original como solicitado
+        driver = new ChromeDriver(options); 
         driver.manage().window().maximize();
         
-        // Timeout padrão de 10 segundos para esperar elementos aparecerem
         wait = new WebDriverWait(driver, Duration.ofSeconds(10));
     }
 
@@ -52,14 +51,13 @@ class salvarLancheSelenium {
     @Test
     void deveAcessarLoginFuncionarioECadastrarIngrediente() throws InterruptedException {
         
-        // *** 1. DECLARAÇÃO DO EXECUTOR (DECLARAÇÃO ÚNICA AQUI) ***
-        // Necessário para forçar eventos de JS e cliques.
+      
         JavascriptExecutor executor = (JavascriptExecutor) driver;
 
         // 1. Acessa a Home
         driver.get(BASE_URL + "/view/home/home.html");
         
-        // Pausa técnica para garantir carregamento visual 
+      
         Thread.sleep(2000);
 
         // 2. Clicar em Acessar Cardápio
@@ -71,7 +69,7 @@ class salvarLancheSelenium {
             System.out.println("Botão de cardápio não necessário ou não encontrado.");
         }
 
-        // 3. Lidar com Alerta inicial (Token expirado etc)
+        // 3. Lidar com Alerta inicial 
         try {
             Alert alerta = wait.until(ExpectedConditions.alertIsPresent());
             alerta.accept();
@@ -150,33 +148,33 @@ class salvarLancheSelenium {
         Thread.sleep(2000); 
         
         
-        // --- INÍCIO DA FUNCIONALIDADE SALVAR LANCHE (COM CORREÇÕES DE VALIDAÇÃO) ---
+        // --- INÍCIO DA FUNCIONALIDADE SALVAR LANCHE  ---
 
-        // 11. GARANTIR a navegação para o Painel para que o botão 'Cadastrar Lanches' apareça.
+        // 11. garamtir a navegação para o Painel para que o botão 'Cadastrar Lanches' apareça.
         driver.get(BASE_URL + "view/painel/painel.html"); 
 
         // 12. Clicar no botão "Cadastrar Lanches"
         wait.until(ExpectedConditions.elementToBeClickable(
                 By.xpath("//button[contains(text(),'Cadastrar Lanches')]"))).click();
 
-        // Espera o campo Nome da tela de lanches (ID: nomeLanche) para garantir o carregamento
+        // Espera o campo Nome da tela de lanches  para garantir o carregamento
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("nomeLanche")));
 
-     // 13. Preencher o Campo NOME do Lanche (ID: nomeLanche) - CORREÇÃO DE EVENTOS
+     // 13. Preencher o Campo nome do Lanche 
         WebElement campoNomeLanche = driver.findElement(By.id("nomeLanche")); 
-        campoNomeLanche.clear(); // Limpa o campo (CRÍTICO)
+        campoNomeLanche.clear(); 
         campoNomeLanche.sendKeys("Lanche Teste Mínimo"); 
         
-        // FORÇA O EVENTO CHANGE/BLUR PARA O JS RECONHECER O VALOR!
+  
         executor.executeScript("arguments[0].dispatchEvent(new Event('change'));", campoNomeLanche);
         executor.executeScript("arguments[0].dispatchEvent(new Event('blur'));", campoNomeLanche);
         Thread.sleep(500); 
 
-     // 14. Selecionar o PÃO (USANDO ID: selectPao)
+     // 14. Selecionar o pao
         WebElement selectElementPao = driver.findElement(By.id("selectPao"));
         Select selectPao = new Select(selectElementPao);
 
-        // Espera até que o dropdown tenha pelo menos 2 opções (sincronização)
+       
         wait.until(ExpectedConditions.numberOfElementsToBeMoreThan(
             By.xpath("//select[@id='selectPao']/option"), 1)
         );
@@ -193,27 +191,27 @@ class salvarLancheSelenium {
         }
         Thread.sleep(1000);
 
-        // 15. Preencher a DESCRIÇÃO (ID: textArea3)
+        // 15. Preencher a descriçao
         WebElement campoDescricao = driver.findElement(By.id("textArea3"));
         campoDescricao.clear(); // Limpa o campo
         campoDescricao.sendKeys("Lanche simples para validar os 4 requisitos."); 
         executor.executeScript("arguments[0].dispatchEvent(new Event('change'));", campoDescricao); // Força evento
         Thread.sleep(500); 
 
-     // 16. Preencher o VALOR do Lanche (ID: ValorLanche)
+     // 16. Preencher o valor do Lanche 
         WebElement campoPrecoLanche = driver.findElement(By.id("ValorLanche"));
         campoPrecoLanche.clear(); // Limpa o campo
         campoPrecoLanche.sendKeys("10.00"); 
         executor.executeScript("arguments[0].dispatchEvent(new Event('change'));", campoPrecoLanche); // Força evento
         Thread.sleep(2000); // Pausa para visualizar antes de salvar
 
-     // 17. Clicar no botão Salvar (FORÇANDO VIA JAVASCRIPT)
+     // 17. Clicar no botão Salvar
         WebElement botaoSalvarLanche = driver.findElement(By.name("salvar"));
 
-        // Executa o clique diretamente (contornando o ElementNotInteractableException)
+        // Executa o clique diretamente 
         executor.executeScript("arguments[0].click();", botaoSalvarLanche);
         
-        // PAUSA LONGA para o servidor responder
+     
         Thread.sleep(4000); 
         
         // 18. Verificar Sucesso
