@@ -51,6 +51,11 @@ class salvarLancheSelenium {
 
     @Test
     void deveAcessarLoginFuncionarioECadastrarIngrediente() throws InterruptedException {
+        
+        // *** 1. DECLARAÇÃO DO EXECUTOR (DECLARAÇÃO ÚNICA AQUI) ***
+        // Necessário para forçar eventos de JS e cliques.
+        JavascriptExecutor executor = (JavascriptExecutor) driver;
+
         // 1. Acessa a Home
         driver.get(BASE_URL + "/view/home/home.html");
         
@@ -95,16 +100,13 @@ class salvarLancheSelenium {
                 By.xpath("//button[contains(text(),'Cadastrar Ingredientes')]")));
         botaoCadIngredientes.click();
 
-        // 7. Preencher Formulário de Cadastro
-        
-        // Nome
+        // 7. Preencher Formulário de Cadastro (Pão - Pré-requisito)
         WebElement campoNome = wait.until(ExpectedConditions.visibilityOfElementLocated(By.name("nome")));
-        campoNome.sendKeys(INGREDIENTE_PAO_CADASTRADO); // Usando a constante para garantir que o nome seja salvo
+        campoNome.sendKeys(INGREDIENTE_PAO_CADASTRADO); 
 
         // Tipo (Usando Select para ser mais robusto)
         WebElement selectElement = driver.findElement(By.name("tipo"));
         Select selectTipo = new Select(selectElement);
-        // Tenta selecionar pelo texto visível ou pelo índice
         try {
             selectTipo.selectByIndex(1); // Seleciona o segundo item da lista
         } catch (Exception e) {
@@ -138,13 +140,8 @@ class salvarLancheSelenium {
         // 9. Verificar Sucesso (Alerta)
         try {
             Alert alertaSucesso = wait.until(ExpectedConditions.alertIsPresent());
-            String textoAlerta = alertaSucesso.getText();
             alertaSucesso.accept();
-            
-            
-        } catch (TimeoutException e) {
-            System.out.println("Alerta de sucesso não apareceu a tempo.");
-        }
+        } catch (TimeoutException e) { System.out.println("Alerta de sucesso não apareceu a tempo."); }
 
         // 10. Ir para Estoque para conferir
         WebElement botaoEstoque = wait.until(ExpectedConditions.elementToBeClickable(By.linkText("Estoque")));
@@ -153,34 +150,27 @@ class salvarLancheSelenium {
         Thread.sleep(2000); 
         
         
-        // --- INÍCIO  SALVAR LANCHE---
-        
+        // --- INÍCIO DA FUNCIONALIDADE SALVAR LANCHE (COM CORREÇÕES DE VALIDAÇÃO) ---
+
         // 11. GARANTIR a navegação para o Painel para que o botão 'Cadastrar Lanches' apareça.
         driver.get(BASE_URL + "view/painel/painel.html"); 
 
         // 12. Clicar no botão "Cadastrar Lanches"
-        WebElement botaoCadastrarLanches = wait.until(ExpectedConditions.elementToBeClickable(
-                By.xpath("//button[contains(text(),'Cadastrar Lanches')]")));
-        botaoCadastrarLanches.click();
+        wait.until(ExpectedConditions.elementToBeClickable(
+                By.xpath("//button[contains(text(),'Cadastrar Lanches')]"))).click();
 
+        // Espera o campo Nome da tela de lanches (ID: nomeLanche) para garantir o carregamento
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("nomeLanche")));
 
-     // 13. Preencher o Campo NOME do Lanche (ID: nomeLanche)
+     // 13. Preencher o Campo NOME do Lanche (ID: nomeLanche) - CORREÇÃO DE EVENTOS
         WebElement campoNomeLanche = driver.findElement(By.id("nomeLanche")); 
-
-     // ******* NOVO AJUSTE CRÍTICO: Limpeza e Foco *******
-     campoNomeLanche.clear(); // Garante que o campo esteja limpo
-     campoNomeLanche.sendKeys("Lanche Teste Final"); 
-     Thread.sleep(200);
-
-     // FORÇAR O EVENTO CHANGE/INPUT VIA JAVASCRIPT (SOLUÇÃO DE SINCRONIZAÇÃO)
-     JavascriptExecutor executor = (JavascriptExecutor) driver;
-
-     // Dispara o evento 'change' e 'blur' (perda de foco) no elemento, garantindo que o JS de validação veja o novo valor.
-     executor.executeScript("arguments[0].dispatchEvent(new Event('change'));", campoNomeLanche);
-     executor.executeScript("arguments[0].dispatchEvent(new Event('blur'));", campoNomeLanche);
-
-     Thread.sleep(500);
+        campoNomeLanche.clear(); // Limpa o campo (CRÍTICO)
+        campoNomeLanche.sendKeys("Lanche Teste Mínimo"); 
+        
+        // FORÇA O EVENTO CHANGE/BLUR PARA O JS RECONHECER O VALOR!
+        executor.executeScript("arguments[0].dispatchEvent(new Event('change'));", campoNomeLanche);
+        executor.executeScript("arguments[0].dispatchEvent(new Event('blur'));", campoNomeLanche);
+        Thread.sleep(500); 
 
      // 14. Selecionar o PÃO (USANDO ID: selectPao)
         WebElement selectElementPao = driver.findElement(By.id("selectPao"));
@@ -203,31 +193,27 @@ class salvarLancheSelenium {
         }
         Thread.sleep(1000);
 
-     // 15. Preencher a DESCRIÇÃO (ID: textArea3)
+        // 15. Preencher a DESCRIÇÃO (ID: textArea3)
         WebElement campoDescricao = driver.findElement(By.id("textArea3"));
-        campoDescricao.clear(); 
+        campoDescricao.clear(); // Limpa o campo
         campoDescricao.sendKeys("Lanche simples para validar os 4 requisitos."); 
         executor.executeScript("arguments[0].dispatchEvent(new Event('change'));", campoDescricao); // Força evento
         Thread.sleep(500); 
 
-        // 16. Preencher o VALOR do Lanche (ID: ValorLanche)
+     // 16. Preencher o VALOR do Lanche (ID: ValorLanche)
         WebElement campoPrecoLanche = driver.findElement(By.id("ValorLanche"));
-        campoPrecoLanche.clear(); 
+        campoPrecoLanche.clear(); // Limpa o campo
         campoPrecoLanche.sendKeys("10.00"); 
         executor.executeScript("arguments[0].dispatchEvent(new Event('change'));", campoPrecoLanche); // Força evento
-        Thread.sleep(2000);
-     // 17. Clicar no botão Salvar 
-     
-        // Localiza o elemento pelo nome 
+        Thread.sleep(2000); // Pausa para visualizar antes de salvar
+
+     // 17. Clicar no botão Salvar (FORÇANDO VIA JAVASCRIPT)
         WebElement botaoSalvarLanche = driver.findElement(By.name("salvar"));
 
-     
-       
-
-        // 2. Executa o clique diretamente (contornando o ElementNotInteractableException)
+        // Executa o clique diretamente (contornando o ElementNotInteractableException)
         executor.executeScript("arguments[0].click();", botaoSalvarLanche);
         
-        
+        // PAUSA LONGA para o servidor responder
         Thread.sleep(4000); 
         
         // 18. Verificar Sucesso
@@ -235,9 +221,10 @@ class salvarLancheSelenium {
             Alert alertaLanche = wait.until(ExpectedConditions.alertIsPresent());
             String textoAlerta = alertaLanche.getText();
             alertaLanche.accept();
-           
+            
+            // Verificação da Asserção: Agora deve conter "Lanche Salvo com Sucesso!"
             Assertions.assertTrue(textoAlerta.contains("Lanche Salvo com Sucesso!"), 
-                                  "Falha! O Alerta não contém a mensagem de sucesso. Conteúdo: " + textoAlerta);
+                                  "Falha! O Alerta não contém a mensagem de sucesso. Conteúdo retornado: " + textoAlerta);
             
         } catch (TimeoutException e) {
             Assertions.fail("Tempo esgotado! Alert de sucesso não apareceu após salvar o lanche.");
