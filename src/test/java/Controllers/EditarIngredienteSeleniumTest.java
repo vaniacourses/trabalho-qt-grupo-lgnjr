@@ -104,12 +104,9 @@ class EditarIngredienteSeleniumTest {
 
         // 9. Ir para Estoque
         wait.until(ExpectedConditions.elementToBeClickable(By.linkText("Estoque"))).click();
-
-
-        // EDIÇÃO DO INGREDIENTE
         Thread.sleep(1500);
 
-        // 10. Esperar tabela carregar
+        // 10. Esperar tabela de ingredientes carregar
         WebElement tabela = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("tabelaIngredientes")));
         wait.until(driver -> tabela.findElements(By.tagName("tr")).size() > 1);
 
@@ -120,18 +117,18 @@ class EditarIngredienteSeleniumTest {
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Ingrediente não encontrado na tabela"));
 
-        // 11.1 CLICAR NA CÉLULA DA COLUNA 'Nome'
+        // 12. Clicar exatamente na célula do NOME (2ª coluna)
         WebElement celulaNome = linhaIngrediente.findElements(By.tagName("td")).get(1);
         celulaNome.click();
 
-        // Agora o formulário deve estar visível
+        // 13. Aguarda formulário aparecer
         WebElement nomeEdit = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("ingredientesNome")));
         WebElement descEdit = driver.findElement(By.id("ingredientesDescricao"));
         WebElement qtdEdit = driver.findElement(By.id("ingredientesQuantidade"));
         WebElement compraEdit = driver.findElement(By.id("ingredientesPrecoCompra"));
         WebElement vendaEdit = driver.findElement(By.id("ingredientesPrecoVenda"));
 
-        // 12. Editar os campos
+        // 14. Alterar valores
         nomeEdit.clear();
         nomeEdit.sendKeys("Pão Italiano Selenium");
 
@@ -147,25 +144,27 @@ class EditarIngredienteSeleniumTest {
         vendaEdit.clear();
         vendaEdit.sendKeys("4.50");
 
-        // 13. Clicar no botão ALTERAR
+        // 15. Clicar no botão ALTERAR
         WebElement btnAlterar = driver.findElement(
-            By.xpath("//input[@value='Alterar' and contains(@onclick,'alterarIngrediente')]")
+                By.xpath("//input[@type='button' and @value='Alterar' and contains(@onclick,'alterarIngrediente')]")
         );
+
         btnAlterar.click();
 
-        // 14. Esperar alerta
+        // 16. Aceitar alerta de sucesso
         Alert alertaAlterar = wait.until(ExpectedConditions.alertIsPresent());
         alertaAlterar.accept();
 
-        // 15. Validar atualização
+        // 17. Página recarrega → esperar tabela novamente
         tabela = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("tabelaIngredientes")));
-        wait.until(driver -> tabela.findElements(By.tagName("tr")).size() > 1);
+        Thread.sleep(1500);
 
+        // 18. Validar ingrediente atualizado
         WebElement linhaAtualizada = tabela.findElements(By.tagName("tr"))
                 .stream()
                 .filter(tr -> tr.getText().contains("Pão Italiano Selenium"))
                 .findFirst()
-                .orElseThrow(() -> new RuntimeException("Ingrediente alterado não encontrado na tabela"));
+                .orElseThrow(() -> new RuntimeException("Ingrediente alterado não aparece na tabela"));
 
         String textoLinha = linhaAtualizada.getText();
 
