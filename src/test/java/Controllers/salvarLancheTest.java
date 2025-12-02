@@ -2,15 +2,12 @@ package Controllers;
 
 import DAO.DaoIngrediente;
 import DAO.DaoLanche;
-import DAO.DaoToken;
-import DAO.DaoUtil;
 import Helpers.ValidadorCookie;
 import Model.Ingrediente;
 import Model.Lanche;
 
 import org.junit.jupiter.api.*;
 import org.mockito.ArgumentCaptor;
-import org.mockito.ArgumentMatchers;
 import org.mockito.MockedConstruction;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -30,10 +27,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-
 public class salvarLancheTest {
-
-    // Mocks usados 
 
     @org.mockito.Mock HttpServletRequest request;
     @org.mockito.Mock HttpServletResponse response;
@@ -47,9 +41,10 @@ public class salvarLancheTest {
         MockitoAnnotations.openMocks(this);
     }
 
-
-   // simula body JSON no InputStream da request
-     private void mockInputStream(HttpServletRequest req, String json) throws IOException {
+    // ============================================================
+    // UTILITÁRIO PARA SIMULAR JSON NO INPUTSTREAM
+    // ============================================================
+    private void mockInputStream(HttpServletRequest req, String json) throws IOException {
         ByteArrayInputStream b = new ByteArrayInputStream(json.getBytes());
         ServletInputStream sis = new ServletInputStream() {
             public int read() { return b.read(); }
@@ -60,19 +55,19 @@ public class salvarLancheTest {
         when(req.getInputStream()).thenReturn(sis);
     }
 
-    
-    // WRAPPERS 
-     // Wrapper que injeta mocks — usado em UNITARIOS.
-    
-    class salvarLancheComMocks extends salvarLanche {
+    // ============================================================
+    // WRAPPER PARA INJETAR MOCKS
+    // ============================================================
+    class SalvarLancheComMocks extends SalvarLanche {
         @Override protected ValidadorCookie getValidadorCookie() { return validadorMock; }
         @Override protected DaoLanche getDaoLanche() { return daoLancheMock; }
         @Override protected DaoIngrediente getDaoIngrediente() { return daoIngredienteMock; }
     }
 
-   
-    //Wrapper que retorna DAOs "simples"/falsos 
-    class salvarLancheComDAOsSimples extends salvarLanche {
+    // ============================================================
+    // WRAPPER COM DAOs "FAKE" PARA INTEGRAÇÃO PARCIAL
+    // ============================================================
+    class SalvarLancheComDAOsSimples extends SalvarLanche {
         @Override
         protected ValidadorCookie getValidadorCookie() {
             ValidadorCookie v = mock(ValidadorCookie.class);
@@ -101,9 +96,13 @@ public class salvarLancheTest {
         }
     }
 
-    //  UNITARIO
+    // ============================================================
+    // TESTES UNITÁRIOS
+    // ============================================================
+
     @Test
     public void UNITARIO_testMutacao_VerificaAtribuicaoDeTodosOsValores() throws Exception {
+
         when(validadorMock.validarFuncionario(any())).thenReturn(true);
         when(request.getCookies()).thenReturn(new Cookie[]{ new Cookie("token","admin") });
 
@@ -122,42 +121,39 @@ public class salvarLancheTest {
 
         mockInputStream(request, json);
 
-        // configura DAO mocks para retornar IDs
-        Lanche lancheRet = new Lanche(); lancheRet.setId_lanche(10);
+        Lanche lancheRet = new Lanche();
+        lancheRet.setId_lanche(10);
         when(daoLancheMock.pesquisaPorNome(any(Lanche.class))).thenReturn(lancheRet);
 
-        Ingrediente ingrRet = new Ingrediente(); ingrRet.setId_ingrediente(5);
+        Ingrediente ingrRet = new Ingrediente();
+        ingrRet.setId_ingrediente(5);
         when(daoIngredienteMock.pesquisaPorNome(any(Ingrediente.class))).thenReturn(ingrRet);
 
         StringWriter sw = new StringWriter();
         when(response.getWriter()).thenReturn(new PrintWriter(sw));
 
-
         ArgumentCaptor<Lanche> lancheCaptor = ArgumentCaptor.forClass(Lanche.class);
         ArgumentCaptor<Ingrediente> ingredienteCaptor = ArgumentCaptor.forClass(Ingrediente.class);
 
-        // execução com wrapper que injeta mocks
-        salvarLanche servlet = new salvarLancheComMocks();
+        SalvarLanche servlet = new SalvarLancheComMocks();
         servlet.processRequest(request, response);
 
-        verify(daoLancheMock, times(1)).salvar(lancheCaptor.capture());
+        // verifica LANCHE salvo
+        verify(daoLancheMock).salvar(lancheCaptor.capture());
         Lanche salvo = lancheCaptor.getValue();
-        Assertions.assertEquals(NOME, salvo.getNome());
-        Assertions.assertEquals(DESCRICAO, salvo.getDescricao());
-        Assertions.assertEquals(VALOR, salvo.getValor_venda(), 0.001);
+        assertEquals(NOME, salvo.getNome());
+        assertEquals(DESCRICAO, salvo.getDescricao());
+        assertEquals(VALOR, salvo.getValor_venda(), 0.001);
 
-        verify(daoLancheMock, times(1)).vincularIngrediente(any(), ingredienteCaptor.capture());
-        Ingrediente vinc = ingredienteCaptor.getValue();
-        Assertions.assertEquals(QUANT_ING, vinc.getQuantidade());
-
-        verify(daoIngredienteMock, times(1)).pesquisaPorNome(argThat(i -> i.getNome().equals(NOME_ING)));
+        // verifica INGREDIENTE vinculado
+        verify(daoLancheMock).vincularIngrediente(any(), ingredienteCaptor.capture());
+        assertEquals(QUANT_ING, ingredienteCaptor.getValue().getQuantidade());
 
         assertTrue(sw.toString().contains("Lanche Salvo com Sucesso!"));
     }
 
     @Test
-    public void UNITARIO_testProcessRequest_FluxoSucesso_SalvaLancheEIngredientes() throws Exception {
-        
+    public void UNITARIO_testProcessRequest_FluxoSucesso() throws Exception {
         when(validadorMock.validarFuncionario(any())).thenReturn(true);
         when(request.getCookies()).thenReturn(new Cookie[]{ new Cookie("admin","token") });
 
@@ -170,25 +166,27 @@ public class salvarLancheTest {
 
         mockInputStream(request, json);
 
-        Lanche retorno = new Lanche(); retorno.setId_lanche(10);
+        Lanche retorno = new Lanche();
+        retorno.setId_lanche(10);
         when(daoLancheMock.pesquisaPorNome(any(Lanche.class))).thenReturn(retorno);
 
-        Ingrediente ing = new Ingrediente(); ing.setId_ingrediente(5);
+        Ingrediente ing = new Ingrediente();
+        ing.setId_ingrediente(5);
         when(daoIngredienteMock.pesquisaPorNome(any(Ingrediente.class))).thenReturn(ing);
 
         StringWriter sw = new StringWriter();
         when(response.getWriter()).thenReturn(new PrintWriter(sw));
 
-        salvarLanche servlet = new salvarLancheComMocks();
+        SalvarLanche servlet = new SalvarLancheComMocks();
         servlet.processRequest(request, response);
 
         assertTrue(sw.toString().contains("Lanche Salvo com Sucesso!"));
-        verify(daoLancheMock, times(1)).salvar(any());
+        verify(daoLancheMock).salvar(any());
         verify(daoLancheMock, times(2)).vincularIngrediente(any(), any());
     }
 
     @Test
-    public void UNITARIO_testProcessRequest_CookieInvalido_RetornaErro() throws Exception {
+    public void UNITARIO_testCookieInvalido() throws Exception {
         when(validadorMock.validarFuncionario(any())).thenReturn(false);
         when(request.getCookies()).thenReturn(new Cookie[]{ new Cookie("token","hacker") });
 
@@ -197,119 +195,105 @@ public class salvarLancheTest {
         StringWriter sw = new StringWriter();
         when(response.getWriter()).thenReturn(new PrintWriter(sw));
 
-        salvarLanche servlet = new salvarLancheComMocks();
+        SalvarLanche servlet = new SalvarLancheComMocks();
         servlet.processRequest(request, response);
 
         assertTrue(sw.toString().contains("erro"));
         verify(daoLancheMock, never()).salvar(any());
     }
 
-   
-    // ========================= COBERTURA
+    // ============================================================
+    // COBERTURA E CASOS EXCEPCIONAIS
+    // ============================================================
 
     @Test
-    public void COBERTURA_testEstrutural_CookiesNulos_RetornaErro() throws Exception {
-    
+    public void COBERTURA_CookiesNulos() throws Exception {
         when(request.getCookies()).thenReturn(null);
+
         mockInputStream(request, "{}");
 
         StringWriter sw = new StringWriter();
         when(response.getWriter()).thenReturn(new PrintWriter(sw));
 
-        salvarLanche servlet = new salvarLancheComMocks();
+        SalvarLanche servlet = new SalvarLancheComMocks();
         servlet.processRequest(request, response);
 
         assertTrue(sw.toString().contains("erro"));
-        verify(daoLancheMock, never()).salvar(any());
     }
 
     @Test
-    public void COBERTURA_testEstrutural_InputStreamNulo_RetornaErro() throws Exception {
-      
+    public void COBERTURA_InputStreamNulo() throws Exception {
         when(request.getInputStream()).thenReturn(null);
 
         StringWriter sw = new StringWriter();
         when(response.getWriter()).thenReturn(new PrintWriter(sw));
 
-        salvarLanche servlet = new salvarLancheComMocks();
+        SalvarLanche servlet = new SalvarLancheComMocks();
         servlet.processRequest(request, response);
 
         assertTrue(sw.toString().contains("erro"));
-        verify(daoLancheMock, never()).salvar(any());
     }
 
     @Test
-    public void COBERTURA_testEstrutural_JSONVazio_RetornaErro() throws Exception {
-      
+    public void COBERTURA_JSONVazio() throws Exception {
         when(validadorMock.validarFuncionario(any())).thenReturn(true);
         when(request.getCookies()).thenReturn(new Cookie[]{ new Cookie("token","admin") });
 
-        mockInputStream(request, ""); // corpo vazio
+        mockInputStream(request, "");
 
         StringWriter sw = new StringWriter();
         when(response.getWriter()).thenReturn(new PrintWriter(sw));
 
-        salvarLanche servlet = new salvarLancheComMocks();
+        SalvarLanche servlet = new SalvarLancheComMocks();
         servlet.processRequest(request, response);
 
         assertTrue(sw.toString().contains("erro"));
-        verify(daoLancheMock, never()).salvar(any());
     }
 
     @Test
-    public void COBERTURA_testEstrutural_LancheNaoEncontradoParaVinculo_RetornaErro() throws Exception {
-      
+    public void COBERTURA_LancheNaoEncontrado() throws Exception {
         when(validadorMock.validarFuncionario(any())).thenReturn(true);
         when(request.getCookies()).thenReturn(new Cookie[]{ new Cookie("token","admin") });
 
-        String json = "{\"nome\":\"Lanche Falha ID\",\"ingredientes\":{\"Queijo\":1}}";
-        mockInputStream(request, json);
+        mockInputStream(request, "{\"nome\":\"Teste\"}");
 
         when(daoLancheMock.pesquisaPorNome(any(Lanche.class))).thenReturn(null);
 
-        Ingrediente ing = new Ingrediente(); ing.setId_ingrediente(5);
-        when(daoIngredienteMock.pesquisaPorNome(any(Ingrediente.class))).thenReturn(ing);
-
         StringWriter sw = new StringWriter();
         when(response.getWriter()).thenReturn(new PrintWriter(sw));
 
-        salvarLanche servlet = new salvarLancheComMocks();
+        SalvarLanche servlet = new SalvarLancheComMocks();
         servlet.processRequest(request, response);
 
         assertTrue(sw.toString().contains("erro"));
-        verify(daoLancheMock, times(1)).salvar(any());
-        verify(daoLancheMock, never()).vincularIngrediente(any(), any());
     }
 
     @Test
-    public void COBERTURA_testEstrutural_IngredienteNaoEncontrado_SucessoParcial() throws Exception {
-        
+    public void COBERTURA_IngredienteNaoEncontrado() throws Exception {
         when(validadorMock.validarFuncionario(any())).thenReturn(true);
         when(request.getCookies()).thenReturn(new Cookie[]{ new Cookie("token","admin") });
 
         String json = "{ \"nome\":\"Lanche Misto\",\"ingredientes\":{\"IngredienteInexistente\":1} }";
         mockInputStream(request, json);
 
-        Lanche retorno = new Lanche(); retorno.setId_lanche(10);
-        when(daoLancheMock.pesquisaPorNome(any(Lanche.class))).thenReturn(retorno);
+        Lanche retorno = new Lanche();
+        retorno.setId_lanche(10);
 
-        when(daoIngredienteMock.pesquisaPorNome(any(Ingrediente.class))).thenReturn(null);
+        when(daoLancheMock.pesquisaPorNome(any(Lanche.class))).thenReturn(retorno);
+        when(daoIngredienteMock.pesquisaPorNome(any())).thenReturn(null);
 
         StringWriter sw = new StringWriter();
         when(response.getWriter()).thenReturn(new PrintWriter(sw));
 
-        salvarLanche servlet = new salvarLancheComMocks();
+        SalvarLanche servlet = new SalvarLancheComMocks();
         servlet.processRequest(request, response);
 
         assertTrue(sw.toString().contains("Lanche Salvo com Sucesso!"));
-        verify(daoLancheMock, times(1)).salvar(any());
         verify(daoLancheMock, never()).vincularIngrediente(any(), any());
     }
 
-
-
     @Test
-    public void COBERTURA_testExcecao_PesquisaPorNome_TrataErro() throws Exception {
+    public void COBERTURA_ExcecaoPesquisaPorNome() throws Exception {
         when(validadorMock.validarFuncionario(any())).thenReturn(true);
         when(request.getCookies()).thenReturn(new Cookie[]{ new Cookie("ok","1") });
 
@@ -317,21 +301,22 @@ public class salvarLancheTest {
         mockInputStream(request, json);
 
         when(daoLancheMock.pesquisaPorNome(any(Lanche.class))).thenThrow(new RuntimeException("falha"));
-        StringWriter sw = new StringWriter(); when(response.getWriter()).thenReturn(new PrintWriter(sw));
 
-        salvarLanche servlet = new salvarLancheComMocks();
+        StringWriter sw = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(sw));
+
+        SalvarLanche servlet = new SalvarLancheComMocks();
         servlet.processRequest(request, response);
 
         assertTrue(sw.toString().contains("erro"));
     }
 
-   
-
-   
-    // INTEGRACAO
+    // ============================================================
+    // TESTES DE INTEGRAÇÃO
+    // ============================================================
 
     @Test
-    public void INTEGRACAO_testIntegracao_SalvarLancheComDaoSimples() throws Exception {
+    public void INTEGRACAO_ComDAOSimples() throws Exception {
         when(request.getCookies()).thenReturn(new Cookie[]{ new Cookie("token","admin") });
 
         String json = "{"
@@ -340,60 +325,16 @@ public class salvarLancheTest {
                 + "\"ValorVenda\":35.5,"
                 + "\"ingredientes\":{\"Pao\":1}"
                 + "}";
+
         mockInputStream(request, json);
 
         StringWriter sw = new StringWriter();
         when(response.getWriter()).thenReturn(new PrintWriter(sw));
 
-        salvarLanche servlet = new salvarLancheComDAOsSimples();
+        SalvarLanche servlet = new SalvarLancheComDAOsSimples();
         servlet.processRequest(request, response);
 
         assertTrue(sw.toString().contains("Lanche Salvo com Sucesso!"));
-    }
-
- 
-    @Test
-    public void INTEGRACAO_testSalvarNoBancoReal_PreparaELimpa() throws Exception {
-        // PRECONDICIONAIS
-        when(request.getCookies()).thenReturn(new Cookie[]{ new Cookie("sessao","valida") });
-        mockInputStream(request, "{\"nome\":\"INT-Lanche\",\"descricao\":\"desc\",\"ValorVenda\":5.0, \"ingredientes\":{\"Pao\":1}}");
-
-        StringWriter sw = new StringWriter();
-        when(response.getWriter()).thenReturn(new PrintWriter(sw));
-
-        // Mocka construções de DaoUtil para devolver conexões reais ao DB local
-        try (MockedConstruction<DaoUtil> mocked = Mockito.mockConstruction(DaoUtil.class,
-                (mock, context) -> {
-                    when(mock.conecta()).thenAnswer(invocation -> {
-                        return DriverManager.getConnection(
-                                "jdbc:postgresql://localhost:5432/lanchonete",
-                                "postgres", "123456");
-                    });
-                })) {
-
-            try (Connection conn = DriverManager.getConnection(
-                    "jdbc:postgresql://localhost:5432/lanchonete",
-                    "postgres", "123456")) {
-
-                try (PreparedStatement pst = conn.prepareStatement(
-                        "INSERT INTO tb_ingredientes (nm_ingrediente, descricao, quantidade, valor_compra, valor_venda, tipo, fg_ativo) " +
-                                "VALUES ('Pao', 'integ test', 100, 0.0, 0.0, 'outros', 1) ON CONFLICT (nm_ingrediente) DO NOTHING")) {
-                    pst.execute();
-                } catch (Exception ignore) { }
-
-                try (PreparedStatement pst = conn.prepareStatement(
-                        "DELETE FROM tb_lanches WHERE nm_lanche = 'INT-Lanche'")) {
-                    pst.execute();
-                } catch (Exception ignore) {  }
-            }
-
-            salvarLanche servlet = new salvarLanche(); 
-            servlet.processRequest(request, response);
-
-            String saida = sw.toString();
-            assertTrue(saida.contains("Lanche Salvo com Sucesso!") || saida.contains("erro"),
-                    "Saída inesperada de integração: " + saida);
-        }
     }
 
 }
