@@ -1,5 +1,4 @@
 package Controllers;
-
 import DAO.DaoIngrediente;
 import Helpers.ValidadorCookie;
 import Model.Ingrediente;
