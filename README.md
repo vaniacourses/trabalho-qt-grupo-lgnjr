@@ -1,62 +1,113 @@
-# APS-04-Lanchonete-Online-em-Java
+# 🧪 Trabalho Final de Qualidade e Teste de Software — Projeto Lanchonete
 
-## Sobre
-Com o objetivo de desenvolver a capacidade dos alunos e obter nota na disciplina APS (Atividades Práticas Supervisionadas), 
-foi proposto um projeto de desenvolvimento de um sistema para uma lanchonete online, onde o administrador consiga controlar 
-os pedidos da lanchonete e emitir relatórios. A lanchonete devera permitir o cadastro dos usuários, para que eles possam realizar seus pedidos, 
-e o cadastro de produtos, que ficariam por parte do administrador. Após o cadastro,  cliente poderá utilizar os ingredientes cadastrados para 
-criar seu lanche personalizado. O sistema deverá fazer o controle dos pedidos de forma que agrade os clientes, e controlar tambem o estoque de produtos.
+Este repositório contém os artefatos de teste, código-fonte refatorado e documentação referentes à entrega final da disciplina de **Qualidade e Teste de Software**.
 
-## Tecnologias Utilizadas
+**Grupo:** LGNJR
 
-O Sistema funciona com base em um Frontend Utilizando HTML 5, CSS3 e JavaScript, e um Backend baseado em Java Web utilizando-se do Servidor Glassfish 4 
-e muito baseado no uso de Servlets para a Comunicação atraves de requisições. Além disso o Sistema utiliza das Bibliotecas gson-2.8.6 e json-20200518 
-Para a manipulação de Arquivos JSON dentro do Código Java, e de um Banco de Dados PostgreSQL, do qual o Código base também se encontra no repositório.
+---
 
-## Alguns Screenshots
+## 👥 Equipe e Responsabilidades Individuais
 
-![alt text](https://i.ibb.co/BPn99jW/248f5162-df3a-4754-8ade-82b9784f94d8.jpg)
-![alt text](https://i.ibb.co/GM3r7Dd/daf6e1f9-676e-4a27-9669-80036dc52cce.jpg)
-![alt text](https://i.ibb.co/kXdFFq5/e378bda9-bcc8-4483-bb2f-f2143a79817e.jpg)
-![alt text](https://i.ibb.co/z7kqx4x/a5a0e3f3-3605-4d3f-b2ba-f54c2ef76f18.jpg)
-![alt text](https://i.ibb.co/C6kMZLW/c1bad7f9-c79a-4516-9d08-bc2548ee9880.jpg)
-![alt text](https://i.ibb.co/2321674/8a74fb26-1db0-49df-b2d7-2479d0567a4e.jpg)
-![alt text](https://i.ibb.co/2YSbvGZ/8d3386e3-d13b-4a42-b389-151fbadb1d77.jpg)
+Para atender aos requisitos da **Entrega 2**, cada membro ficou responsável pela refatoração, testes unitários (Mock), testes estruturais (>80% cobertura) e testes de mutação (>80% score) de uma classe com **alta complexidade ciclomática (CC > 10)**.
 
-## Como rodar o projeto
+| Integrante | Classe de Teste | Tipo de teste | 
+|-----------|---------------------------|--------------------|
+| **Lylian** | `src/java/Controllers/comprar.java` | Unitário e integração | 
+| **Lylian** | `src/test/java/Controllers/comprarTest.java ` | Sistema (Selenium) | 
+| **Nayara** | `src/java/Controllers/salvarLanche.java` | Unitário e integração | 
+| **Nayara** | `src/test/java/Controllers/salvarLancheSelenium.java` |  Sistema (Selenium) | 
+| **Rodrigo** | `src/java/Controllers/alterarStatusLanchonete.java` | Unitário |
+| **Rodrigo** | `src/test/java/Controllers/DaoStatusLanchoneteIntegracaoTest.java ` | Integração | 
+| **Rodrigo** | `src/test/java/Controllers/EditarIngredienteSeleniumTest.java` | Sistema (Selenium) |
+| **Geiziane** | `src/java/Controllers/alterarIngrediente.java` | Unitário |
+| **Geiziane** | `src/test/java/Controllers/CadastrarIngredienteSelenium.java` | Sistema (Selenium) |
+| **João** | `src/java/Controllers/getIngredientesPorLanche.java` | Unitário | 
 
-### Pré-requisitos
-- [Docker](https://www.docker.com/get-started) e [Docker Compose](https://docs.docker.com/compose/install/)
-- [Java 8+](https://adoptopenjdk.net/) e [Maven](https://maven.apache.org/)
+---
 
-### Passos para executar
+## 📍 Mapa dos Entregáveis
 
-1. **Clone o repositório:**
+Itens e evidências relacionadas aos requisitos avaliados.
 
-   ```bash
-   git clone <url-do-repositorio>
-   cd APS-04-Lanchonete-Online-em-Java
-   ```
+---
 
-2. **Suba os containers com Docker Compose:**
+### 1. ✅ Testes Unitários e Cobertura Estrutural
+- **Técnica:** Caixa Branca com isolamento de dependências usando Mockito.  
+- **Meta atingida:** Todas as 5 classes obtiveram **>80% de cobertura de arestas (branches)**.  
+- **Localização dos testes:** `src/test/java/Controllers/`
 
-   ```bash
-   docker-compose up --build -d
-   ```
+---
 
-   Isso irá criar e iniciar os containers do banco de dados PostgreSQL e do servidor Tomcat com a aplicação.
+### 2. 🗄️ Testes de Integração (Banco de Dados Real)
+- **Objetivo:** Validar persistência real no PostgreSQL.  
+- **Abrange:** Driver JDBC, consultas SQL e constraints.  
+- **Exemplo:** Método `INTEGRACAO_testeSalvarNoBancoReal` em  
+  `src/test/java/Controllers/comprarTest.java`.
 
-3. **Acesse a aplicação:**
+---
 
-   - API: [http://localhost:8080](http://localhost:8080)
+### 3. 🧬 Testes Baseados em Defeitos (Mutação — PITest)
+- **Ferramenta:** PITest  
+- **Meta:** classes com **>80% Mutation Score**.  
+- **Evidências do escore de mutação:** *https://docs.google.com/document/d/1cWw8QR-QYhvLskCFNF5J_nuCdz6zysa6NuJYaQGKXzM/edit?usp=sharing* 
 
-4. **Para parar e remover tudo:**
+---
 
-   ```bash
-   docker-compose down -v
-   ```
+### 4. 🌐 Testes de Sistema (Selenium WebDriver)
+- **Requisitos testados:** Cadastro e Edição de Ingredientes, cadastro de usuário, salvar lache.  
+- **Fluxos completos:**  
+    - Acessar Home → Entrar no Carrinho → Login Admin → Abrir Lanchonete → Logout → Voltar ao Carrinho → Abrir Cadastro → Preencher dados → Validar erro Telefone → Corrigir → Validar erro Número → Corrigir → Cadastrar com sucesso (cadastrarUsuarioSelenium)
+    - Acessar Home → Acessar Cardápio → Login Admin → Cadastrar Ingrediente → Salvar → Ir ao Estoque → Selecionar Ingrediente → Editar → Validar atualização na tabela (EditarIngredienteSeleniumTest)
+    - Home → Cardápio → Login Funcionário → Login Admin → Cadastrar Ingrediente → Preencher Formulário → Salvar → Validar Alerta → Abrir Estoque (CadastrarIngredienteSelenium)
+    - Home → Cardápio → Meu Carrinho → Funcionário → Login Admin → Cadastrar Ingrediente → Preencher Formulário (Ingrediente) → Salvar → Validar Alerta → Estoque → Painel → Cadastrar Lanches → Preencher Nome → Selecionar Pão → Preencher Descrição → Preencher Preço → Salvar → Validar Alerta de Sucesso (salvarLancheSelenium)
+  
+- **Arquivos:**  
+  `src/test/java/Controllers/cadastrarUsuarioSelenium.java`
+  `src/test/java/Controllers/EditarIngredienteSeleniumTest.java`
+  `src/test/java/Controllers/CadastrarIngredienteSelenium.java`
+  `/src/test/java/Controllers/salvarLancheSelenium.java`
+---
 
-### Observações
-- O banco de dados será inicializado automaticamente com as tabelas necessárias e o usuário de admin para login.
-- Caso precise alterar configurações, edite os arquivos `docker-compose.yml` ou `banco.sql`.
-- Se houver problemas de cache no navegador, utilize Ctrl+F5 ou limpe o cache manualmente.
+### 5. 🔍 Qualidade de Código e Inspeção (Sonar)
+- **Evidências do Sonar:** *https://docs.google.com/document/d/1gNYRPsF9l-dFJsSyKcX5e35pl-TeTy2gmgu79uPhFP4/edit?usp=sharing*
+
+---
+
+### 6. 📚 Documentação
+- **Plano de Teste:** *https://docs.google.com/document/d/1Obq0Ee-HCQhP71YuqeNLDTcpW3OKBTwuY8DSv9ThhRU/edit?tab=t.0*  
+- **Relatório ISO 25010 (Atributos de Qualidade):** *https://docs.google.com/document/d/1U9sODUAbO4gxgEsVTI7mHnLLqilglDJC1jWOnhlMves/edit?usp=sharing*  
+
+---
+
+## 🚀 Guia de Execução
+
+### **Pré-requisitos**
+- Java 8+  
+- Maven  
+- Docker (PostgreSQL)  
+- Google Chrome (para o Selenium)  
+
+---
+
+## 🚀 Como executar o projeto
+
+### 1️⃣ Clone o repositório
+```bash
+git clone https://github.com/vaniacourses/trabalho-qt-grupo-lgnjr.git
+cd trabalho-qt-grupo-lgnjr.git
+```
+
+
+### 2️⃣ Suba os containers com Docker Compose
+```
+docker-compose up --build -d
+```
+
+### 3️⃣ Acesse a aplicação
+```
+http://localhost:8080
+```
+### 4️⃣ Parar e remover tudo
+```
+docker-compose down
+```
