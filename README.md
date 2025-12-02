@@ -12,8 +12,8 @@ Para atender aos requisitos da **Entrega 2**, cada membro ficou responsável pel
 
 | Integrante | Classe de Teste | Tipo de teste | 
 |-----------|---------------------------|--------------------|
-| **Lylian** | `src/java/Controllers/comprar.java` | Unitário e integração | 
-| **Lylian** | `src/test/java/Controllers/comprarTest.java ` | Sistema (Selenium) | 
+| **Lylian** | `src/test/java/Controllers/comprarTest.java ` | Unitário e integração | 
+| **Lylian** | `src/test/java/Controllers/cadastrarUsuarioSelenium.java` | Sistema (Selenium) | 
 | **Nayara** | `src/java/Controllers/salvarLanche.java` | Unitário e integração | 
 | **Nayara** | `src/test/java/Controllers/salvarLancheSelenium.java` |  Sistema (Selenium) | 
 | **Rodrigo** | `src/java/Controllers/alterarStatusLanchonete.java` | Unitário |
