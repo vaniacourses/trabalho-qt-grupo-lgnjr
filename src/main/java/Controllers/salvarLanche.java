@@ -79,7 +79,13 @@ public class salvarLanche extends HttpServlet {
                       
                        lancheDao.salvar(lanche);
                       
-                       Lanche lancheComID = lancheDao.pesquisaPorNome(lanche);
+                       Lanche lancheComID = null;
+                       try {
+                           lancheComID = lancheDao.pesquisaPorNome(lanche);
+                       } catch (Exception e) {
+                           enviarErro(response);
+                           return;
+                       }
                       
                        if (lancheComID != null && ingredientes != null) {
                           
@@ -92,8 +98,12 @@ public class salvarLanche extends HttpServlet {
                                if (key != null) {
                                    Ingrediente ingredienteLanche = new Ingrediente();
                                    ingredienteLanche.setNome(key);
-                                   Ingrediente ingredienteComID = ingredienteDao.pesquisaPorNome(ingredienteLanche);
-                                  
+                                   Ingrediente ingredienteComID = null;
+                                   try {
+                                       ingredienteComID = ingredienteDao.pesquisaPorNome(ingredienteLanche);
+                                   } catch (Exception e) {
+                                       continue; // ignora ingrediente quebrado
+                                   }
                                    if (ingredienteComID != null) {
                                        ingredienteComID.setQuantidade(ingredientes.getInt(key));
                                        lancheDao.vincularIngrediente(lancheComID, ingredienteComID);

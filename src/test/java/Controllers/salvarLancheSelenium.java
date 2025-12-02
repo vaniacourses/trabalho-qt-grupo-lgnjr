@@ -163,7 +163,7 @@ class salvarLancheSelenium {
      // 13. Preencher o Campo nome do Lanche 
         WebElement campoNomeLanche = driver.findElement(By.id("nomeLanche")); 
         campoNomeLanche.clear(); 
-        campoNomeLanche.sendKeys("Lanche Teste Mínimo"); 
+        campoNomeLanche.sendKeys("Lanche"); 
         
   
         executor.executeScript("arguments[0].dispatchEvent(new Event('change'));", campoNomeLanche);
@@ -193,17 +193,17 @@ class salvarLancheSelenium {
 
         // 15. Preencher a descriçao
         WebElement campoDescricao = driver.findElement(By.id("textArea3"));
-        campoDescricao.clear(); // Limpa o campo
-        campoDescricao.sendKeys("Lanche simples para validar os 4 requisitos."); 
+        campoDescricao.clear(); 
+        campoDescricao.sendKeys("Lanche de queijo"); 
         executor.executeScript("arguments[0].dispatchEvent(new Event('change'));", campoDescricao); // Força evento
         Thread.sleep(500); 
 
      // 16. Preencher o valor do Lanche 
         WebElement campoPrecoLanche = driver.findElement(By.id("ValorLanche"));
-        campoPrecoLanche.clear(); // Limpa o campo
+        campoPrecoLanche.clear(); 
         campoPrecoLanche.sendKeys("10.00"); 
         executor.executeScript("arguments[0].dispatchEvent(new Event('change'));", campoPrecoLanche); // Força evento
-        Thread.sleep(2000); // Pausa para visualizar antes de salvar
+        Thread.sleep(2000); 
 
      // 17. Clicar no botão Salvar
         WebElement botaoSalvarLanche = driver.findElement(By.name("salvar"));
