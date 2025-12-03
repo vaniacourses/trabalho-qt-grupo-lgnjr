@@ -29,6 +29,17 @@ import org.json.JSONObject;
  */
 public class getIngredientesPorLanche extends HttpServlet {
 
+    private final ValidadorCookie validador;
+    private final DaoIngrediente dao;
+    private final Gson gson;
+
+    public getIngredientesPorLanche(ValidadorCookie v, DaoIngrediente d, Gson g) {
+        this.validador = v;
+        this.dao = d;
+        this.gson = g;
+    }
+
+
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
      * methods.
