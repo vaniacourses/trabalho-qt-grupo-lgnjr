@@ -10,18 +10,18 @@ import javax.servlet.http.HttpServletResponse;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class AlterarStatusLanchonete extends HttpServlet {
+public class alterarStatusLanchonete extends HttpServlet {
 
     private static final String FIELD_STATUS = "status";
     private static final String STATUS_ABERTO = "ABERTO";
 
 
    private final DaoStatusLanchonete dao;
-   public AlterarStatusLanchonete() {
+   public alterarStatusLanchonete() {
        this.dao = new DaoStatusLanchonete();
    }
    
-   public AlterarStatusLanchonete(DaoStatusLanchonete mockDao) {
+   public alterarStatusLanchonete(DaoStatusLanchonete mockDao) {
        this.dao = mockDao;
    }
 
