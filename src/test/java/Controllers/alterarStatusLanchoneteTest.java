@@ -17,7 +17,7 @@ import static org.mockito.Mockito.*;
 public class alterarStatusLanchoneteTest {
 
     private DaoStatusLanchonete mockDao;
-    private alterarStatusLanchonete controller;
+    private AlterarStatusLanchonete controller;
 
     private HttpServletRequest mockRequest;
     private HttpServletResponse mockResponse;
@@ -28,7 +28,7 @@ public class alterarStatusLanchoneteTest {
     @BeforeEach
     void setup() throws Exception {
         mockDao = mock(DaoStatusLanchonete.class);
-        controller = new alterarStatusLanchonete(mockDao);
+        controller = new AlterarStatusLanchonete(mockDao);
 
         mockRequest = mock(HttpServletRequest.class);
         mockResponse = mock(HttpServletResponse.class);
