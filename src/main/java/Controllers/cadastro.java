@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package Controllers;
 
 import DAO.DaoCliente;
@@ -20,118 +15,126 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.json.JSONException;
 import org.json.JSONObject;
 
-/**
- *
- * @author kener_000
- */
 @WebServlet(name = "cadastro", urlPatterns = {"/cadastro"})
 public class cadastro extends HttpServlet {
 
-    /**
-     * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
-     * methods.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         
-        //Seta o tipo de Conteudo que será recebido, nesse caso, um JSON
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         
-        //Pra receber JSONs, é necessario utilizar esse Buffer pra receber os dados,
-        //Então tem que ser Feito assim:
-        BufferedReader br = new BufferedReader(new InputStreamReader(request.getInputStream()));
-        String json = "";
-        
-        //Aqui ele checa se os Dados não tão vazios, por motivos de vai que
-        if (br != null) {
-            
-            //Converte os dados do JSON pra um Formato de Objeto que o Java consiga lidar
-            json = br.readLine();
-            byte[] bytes = json.getBytes(ISO_8859_1); 
-            String jsonStr = new String(bytes, UTF_8);            
-            JSONObject dados = new JSONObject(jsonStr);
-            
-            //Aqui, ele Instancia um objeto do Model endereco, e Popula ele com os dados do JSON
-            Endereco endereco = new Endereco();
-            endereco.setBairro(dados.getJSONObject("endereco").getString("bairro"));
-            endereco.setCidade(dados.getJSONObject("endereco").getString("cidade"));
-            endereco.setEstado(dados.getJSONObject("endereco").getString("estado"));
-            endereco.setComplemento(dados.getJSONObject("endereco").getString("complemento"));
-            endereco.setRua(dados.getJSONObject("endereco").getString("rua"));
-            endereco.setNumero(dados.getJSONObject("endereco").getInt("numero"));
-            
-            //Aqui, ele Instancia um objeto do Model Cliente, e Popula ele com os dados do JSON
-            Cliente cliente = new Cliente();
-            cliente.setNome(dados.getJSONObject("usuario").getString("nome"));
-            cliente.setSobrenome(dados.getJSONObject("usuario").getString("sobrenome"));
-            cliente.setTelefone(dados.getJSONObject("usuario").getString("telefone"));
-            cliente.setUsuario(dados.getJSONObject("usuario").getString("usuario"));
-            cliente.setSenha(dados.getJSONObject("usuario").getString("senha"));
-            cliente.setFg_ativo(1);
-            
-            //E Para finalizar, salva no Banco usando o DAO deles
-            cliente.setEndereco(endereco);
-            
-            DaoCliente clienteDAO = new DaoCliente();
-            clienteDAO.salvar(cliente);
-            
+        BufferedReader br = null;
+        if (request.getInputStream() != null) {
+             br = new BufferedReader(new InputStreamReader(request.getInputStream()));
         }
         
-        
-        
-        try (PrintWriter out = response.getWriter()) {
-            
-            //Aqui é onde a Resposta é mandada para o Cliente, dando um Feedback de que tudo deu certo.
-            out.println("Usuário Cadastrado!");
+        String json = "";
 
+        // O try-catch maior captura erros de parsing e validação de formato
+        try {
+            if (br != null) {
+                json = br.readLine();
+                
+                if (json != null && !json.trim().isEmpty()) {
+                    
+                    byte[] bytes = json.getBytes(ISO_8859_1); 
+                    String jsonStr = new String(bytes, UTF_8);            
+                    JSONObject dados = new JSONObject(jsonStr);
+                    
+                    // --- VALIDAÇÃO DE FORMATO (CAMPOS CRÍTICOS) ---
+                    
+                    // JSONException: Falha se o campo for nulo, string vazia ou não-numérico
+                    int numero = dados.getJSONObject("endereco").getInt("numero"); 
+                    String telefone = dados.getJSONObject("usuario").getString("telefone");
+                    
+                    // 1. VALIDAÇÃO DE CONTEÚDO (REGEX): Verifica se o telefone tem apenas números
+                    // Se falhar, lançamos IllegalArgumentException, que será pego no catch
+                    if (!telefone.matches("\\d+") || telefone.length() < 8) { 
+                        throw new IllegalArgumentException("Telefone inválido: Deve conter apenas dígitos.");
+                    }
+                    
+                    // --- PERSISTÊNCIA ---
+                    
+                    Endereco endereco = new Endereco();
+                    endereco.setBairro(dados.getJSONObject("endereco").getString("bairro"));
+                    endereco.setCidade(dados.getJSONObject("endereco").getString("cidade"));
+                    endereco.setEstado(dados.getJSONObject("endereco").getString("estado"));
+                    endereco.setComplemento(dados.getJSONObject("endereco").getString("complemento"));
+                    endereco.setRua(dados.getJSONObject("endereco").getString("rua"));
+                    endereco.setNumero(numero); 
+
+                    Cliente cliente = new Cliente();
+                    cliente.setNome(dados.getJSONObject("usuario").getString("nome"));
+                    cliente.setSobrenome(dados.getJSONObject("usuario").getString("sobrenome"));
+                    cliente.setTelefone(telefone); 
+                    cliente.setUsuario(dados.getJSONObject("usuario").getString("usuario"));
+                    cliente.setSenha(dados.getJSONObject("usuario").getString("senha"));
+                    cliente.setFg_ativo(1);
+                    cliente.setEndereco(endereco);
+                    
+                    // MUDANÇA: Usa métodos protegidos para testabilidade
+                    DaoCliente clienteDAO = getDaoCliente();
+                    DaoEndereco enderecoDAO = getDaoEndereco();
+
+                    enderecoDAO.salvar(endereco);
+                    clienteDAO.salvar(cliente);
+                    
+                    // --- SUCESSO ---
+                    try (PrintWriter out = response.getWriter()) {
+                        out.println("Usuário Cadastrado!");
+                    }
+
+                } else {
+                    enviarErro(response, "Dados de requisição vazios ou ausentes.");
+                }
+            } else {
+                 enviarErro(response, "Requisição sem corpo (Buffer nulo).");
+            }
+            
+        } catch (JSONException | IllegalArgumentException e) { 
+            // Captura falha de conversão (numero) OU falha de validação manual (telefone)
+            System.err.println("Erro de validação no cliente: " + e.getMessage());
+            
+            // Retorna erro 400 (Bad Request) com mensagem formatada
+            enviarErro(response, "Erro nos dados: Verifique se campos numéricos (Número, Telefone) contêm apenas dígitos.");
+        } catch (RuntimeException e) {
+            // Captura falhas de persistência (erro de banco, etc.)
+             System.err.println("Erro grave de persistência: " + e.getMessage());
+             enviarErro(response, "Ops... Ocorreu um erro no Cadastro, Tente novamente mais Tarde!");
         }
     }
+    
+    // --- MÉTODOS AUXILIARES E HOOKS ---
 
-    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
-    /**
-     * Handles the HTTP <code>GET</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
+    // Retorna mensagem formatada para erros de validação (HTTP 400)
+    private void enviarErro(HttpServletResponse response, String mensagem) throws IOException {
+        response.setStatus(HttpServletResponse.SC_BAD_REQUEST); 
+        response.setContentType("application/json");
+
+        try (PrintWriter out = response.getWriter()) {
+            JSONObject erro = new JSONObject();
+            erro.put("status", "erro");
+            erro.put("mensagem", mensagem);
+            out.print(erro.toString());
+        } catch (Exception ignore) {}
+    }
+
+    // HOOKS (Ganchos para Testes)
+    protected DaoCliente getDaoCliente() { return new DaoCliente(); }
+    protected DaoEndereco getDaoEndereco() { return new DaoEndereco(); }
+
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        processRequest(request, response);
-    }
+            throws ServletException, IOException { processRequest(request, response); }
 
-    /**
-     * Handles the HTTP <code>POST</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        processRequest(request, response);
-    }
+            throws ServletException, IOException { processRequest(request, response); }
 
-    /**
-     * Returns a short description of the servlet.
-     *
-     * @return a String containing servlet description
-     */
     @Override
-    public String getServletInfo() {
-        return "Short description";
-    }// </editor-fold>
-
+    public String getServletInfo() { return "Short description"; }
 }
