@@ -1,9 +1,7 @@
 package Controllers;
 
-import DAO.DaoIngrediente;
-import DAO.DaoUtil; // 
+import DAO.DaoUtil;
 import Helpers.ValidadorCookie;
-import Model.Ingrediente;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
@@ -18,19 +16,15 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.util.List;
+import java.sql.*;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+public class alterarIngredienteITTest {
 
-public class alterarIngredienteITTest { 
-
-    private alterarIngrediente servlet;
+    private AlterarIngrediente servlet;
     private ValidadorCookie validadorMock;
     private HttpServletRequest request;
     private HttpServletResponse response;
@@ -38,7 +32,7 @@ public class alterarIngredienteITTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        // Mocks só para parte HTTP/autenticação
+        // Mocks HTTP / autenticação
         validadorMock = mock(ValidadorCookie.class);
         request = mock(HttpServletRequest.class);
         response = mock(HttpServletResponse.class);
@@ -46,28 +40,28 @@ public class alterarIngredienteITTest {
         responseWriter = new StringWriter();
         when(response.getWriter()).thenReturn(new PrintWriter(responseWriter));
 
-        // Servlet usando Validador mockado, mas DAO ORIGINAL
-        servlet = new alterarIngrediente() {
+        // Servlet usando validador mockado, mas DAO real (que passa pelo DaoUtil mockado)
+        servlet = new AlterarIngrediente() {
             @Override
             protected ValidadorCookie getValidadorCookie() {
                 return validadorMock;
             }
-      
         };
     }
 
+
+    // 1) TESTE VÁLIDO — ALTERAÇÃO COMPLETA NO BANCO
+ 
     @Test
     void deveAlterarIngredienteNoBanco_QuandoDadosValidos() throws Exception {
-        // 1) Prepara estado inicial no banco (Conexão direta localhost)
+
         prepararIngredienteInicialNoBanco(1);
 
-        // 2) Configura request/autenticação
         Cookie[] cookies = { new Cookie("auth", "token_valido") };
         when(request.getCookies()).thenReturn(cookies);
         when(validadorMock.validarFuncionario(cookies)).thenReturn(true);
 
-        // JSON com os NOVOS valores
-        String json = "{"
+        String jsonValido = "{"
                 + "\"id\": 1,"
                 + "\"nome\": \"Farinha\","
                 + "\"descricao\": \"Farinha fina de trigo\","
@@ -75,65 +69,180 @@ public class alterarIngredienteITTest {
                 + "\"ValorCompra\": 5.5,"
                 + "\"ValorVenda\": 8.0,"
                 + "\"tipo\": \"UN\""
-            + "}";
+                + "}";
 
-        when(request.getInputStream()).thenReturn(criarInput(json));
+        when(request.getInputStream()).thenReturn(criarInput(jsonValido));
 
-        // INTERCEPTAÇÃO DA CONEXÃO DO DAO 
-  
-        // Quando o DaoIngrediente fizer "new DaoUtil()", intercepta e 
-        // manda o método .conecta() retornar uma conexão real para o LOCALHOST.
-        try (MockedConstruction<DaoUtil> mockedDaoUtil = Mockito.mockConstruction(DaoUtil.class,
-                (mock, context) -> {
-                    when(mock.conecta()).thenAnswer(invocation -> 
-                        DriverManager.getConnection(
-                            "jdbc:postgresql://localhost:5432/lanchonete", // URL Local
-                            "postgres", 
-                            "123456" // Senha do seu banco local/docker
-                        )
-                    );
-                })) {
+        // Intercepta DaoUtil.conecta() para usar localhost em vez de "db"
+        try (MockedConstruction<DaoUtil> mockedDaoUtil =
+                     Mockito.mockConstruction(DaoUtil.class, (mock, context) -> {
+                         when(mock.conecta()).thenAnswer(invocation ->
+                                 DriverManager.getConnection(
+                                         "jdbc:postgresql://localhost:5432/lanchonete",
+                                         "postgres",
+                                         "123456"
+                                 )
+                         );
+                     })) {
 
-            // 3) Executa a servlet real
-            // A servlet vai chamar getDaoIngrediente()  new DaoIngrediente() new DaoUtil()
-            // O DaoUtil será o nosso mock configurado acima, conectando no localhost.
             servlet.doPost(request, response);
-
-            // 4) Consulta NO BANCO para validar (usando um DAO auxiliar que também cairá no mock)
-            DaoIngrediente daoVerificador = new DaoIngrediente();
-            Ingrediente ing = buscarIngredientePorId(daoVerificador, 1);
-
-            assertNotNull(ing, "Ingrediente ID=1 deveria existir no banco");
-            assertEquals(1, ing.getId_ingrediente());
-            assertEquals("Farinha", ing.getNome());
-            assertEquals("Farinha fina de trigo", ing.getDescricao());
-            assertEquals(10, ing.getQuantidade());
-            assertEquals(5.5, ing.getValor_compra());
-            assertEquals(8.0, ing.getValor_venda());
-            assertEquals("UN", ing.getTipo());
-            assertEquals(1, ing.getFg_ativo());
         }
 
-        // 5) Verifica resposta HTTP
+        // Verifica direto no banco (sem usar DaoIngrediente)
+        assertIngredienteNoBanco(1,
+                "Farinha",
+                "Farinha fina de trigo",
+                10,
+                5.5,
+                8.0,
+                "UN",
+                1
+        );
+
         String resposta = responseWriter.toString();
         assertTrue(resposta.contains("Ingrediente Alterado!"));
         verify(response).setContentType("application/json");
         verify(response).setCharacterEncoding("UTF-8");
     }
 
-    // MÉTODOS AUXILIARES
 
-    private Ingrediente buscarIngredientePorId(DaoIngrediente dao, int id) {
-        List<Ingrediente> todos = dao.listarTodos();
-        for (Ingrediente i : todos) {
-            if (i.getId_ingrediente() == id) {
-                return i;
-            }
+    // 2) TESTE INVÁLIDO — JSON VAZIO
+   
+    @Test
+    void deveRetornarErro_QuandoJsonVazio_ENaoAlterarBanco() throws Exception {
+
+        prepararIngredienteInicialNoBanco(1);
+
+        Cookie[] cookies = { new Cookie("auth", "token_valido") };
+        when(request.getCookies()).thenReturn(cookies);
+        when(validadorMock.validarFuncionario(cookies)).thenReturn(true);
+
+        // Corpo vazio
+        when(request.getInputStream()).thenReturn(criarInput(""));
+
+        try (MockedConstruction<DaoUtil> mockedDaoUtil =
+                     Mockito.mockConstruction(DaoUtil.class, (mock, context) -> {
+                         when(mock.conecta()).thenAnswer(invocation ->
+                                 DriverManager.getConnection(
+                                         "jdbc:postgresql://localhost:5432/lanchonete",
+                                         "postgres",
+                                         "123456"
+                                 )
+                         );
+                     })) {
+
+            servlet.doPost(request, response);
         }
-        return null;
+
+        // Banco deve continuar com os dados antigos
+        assertIngredienteNoBanco(1,
+                "Nome Antigo",
+                "Descricao antiga",
+                5,
+                3.0,
+                4.0,
+                "UN",
+                1
+        );
+
+        String resposta = responseWriter.toString();
+        System.out.println("RESPOSTA JSON VAZIO = " + resposta);
+
+        // Em vez de depender da mensagem exata, garantimos que NÃO entrou no fluxo feliz
+        assertFalse(resposta.contains("Ingrediente Alterado!"));
+
+        verify(response).setStatus(HttpServletResponse.SC_BAD_REQUEST);
     }
 
-    // Prepara um registro inicial na tabela tb_ingredientes usando JDBC puro e localhost
+    // 3) TESTE INVÁLIDO — JSON MALFORMADO
+
+    @Test
+    void deveRetornarErro_QuandoJsonMalformado_ErroFormato() throws Exception {
+
+        prepararIngredienteInicialNoBanco(1);
+
+        Cookie[] cookies = { new Cookie("auth", "token_valido") };
+        when(request.getCookies()).thenReturn(cookies);
+        when(validadorMock.validarFuncionario(cookies)).thenReturn(true);
+
+        // JSON quebrado
+        String jsonInvalido = "{ id: 1 nome: Farinha }";
+
+        when(request.getInputStream()).thenReturn(criarInput(jsonInvalido));
+
+        try (MockedConstruction<DaoUtil> mockedDaoUtil =
+                     Mockito.mockConstruction(DaoUtil.class, (mock, context) -> {
+                         when(mock.conecta()).thenAnswer(invocation ->
+                                 DriverManager.getConnection(
+                                         "jdbc:postgresql://localhost:5432/lanchonete",
+                                         "postgres",
+                                         "123456"
+                                 )
+                         );
+                     })) {
+
+            servlet.doPost(request, response);
+        }
+
+        // Banco continua com dados antigos
+        assertIngredienteNoBanco(1,
+                "Nome Antigo",
+                "Descricao antiga",
+                5,
+                3.0,
+                4.0,
+                "UN",
+                1
+        );
+
+        String resposta = responseWriter.toString();
+        System.out.println("RESPOSTA JSON MALFORMADO = " + resposta);
+
+       
+        assertFalse(resposta.contains("Ingrediente Alterado!"));
+
+        verify(response).setStatus(HttpServletResponse.SC_BAD_REQUEST);
+    }
+
+
+    // MÉTODOS AUXILIARES
+
+
+    private void assertIngredienteNoBanco(int id,
+                                          String nome,
+                                          String descricao,
+                                          int quantidade,
+                                          double valorCompra,
+                                          double valorVenda,
+                                          String tipo,
+                                          int fgAtivo) throws Exception {
+
+        try (Connection conn = DriverManager.getConnection(
+                "jdbc:postgresql://localhost:5432/lanchonete",
+                "postgres",
+                "123456")) {
+
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT nm_ingrediente, descricao, quantidade, valor_compra, valor_venda, tipo, fg_ativo " +
+                            "FROM tb_ingredientes WHERE id_ingrediente = ?")) {
+
+                ps.setInt(1, id);
+
+                try (ResultSet rs = ps.executeQuery()) {
+                    assertTrue(rs.next(), "Ingrediente ID=" + id + " deveria existir no banco");
+
+                    assertEquals(nome, rs.getString("nm_ingrediente"));
+                    assertEquals(descricao, rs.getString("descricao"));
+                    assertEquals(quantidade, rs.getInt("quantidade"));
+                    assertEquals(valorCompra, rs.getDouble("valor_compra"));
+                    assertEquals(valorVenda, rs.getDouble("valor_venda"));
+                    assertEquals(tipo, rs.getString("tipo"));
+                    assertEquals(fgAtivo, rs.getInt("fg_ativo"));
+                }
+            }
+        }
+    }
+
     private void prepararIngredienteInicialNoBanco(int id) throws Exception {
         try (Connection conn = DriverManager.getConnection(
                 "jdbc:postgresql://localhost:5432/lanchonete",
@@ -148,8 +257,8 @@ public class alterarIngredienteITTest {
 
             try (PreparedStatement insert = conn.prepareStatement(
                     "INSERT INTO tb_ingredientes " +
-                    "(id_ingrediente, nm_ingrediente, descricao, quantidade, valor_compra, valor_venda, tipo, fg_ativo) " +
-                    "VALUES (?, 'Nome Antigo', 'Descricao antiga', 5, 3.0, 4.0, 'UN', 1)")) {
+                            "(id_ingrediente, nm_ingrediente, descricao, quantidade, valor_compra, valor_venda, tipo, fg_ativo) " +
+                            "VALUES (?, 'Nome Antigo', 'Descricao antiga', 5, 3.0, 4.0, 'UN', 1)")) {
                 insert.setInt(1, id);
                 insert.execute();
             }
