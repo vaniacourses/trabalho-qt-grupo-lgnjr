@@ -8,7 +8,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -59,8 +58,8 @@ public class comprarTest {
         ValidadorCookie validadorMock;
         DaoPedido daoPedidoMock;
         DaoCliente daoClienteMock;
-        DaoLanche daoLancheMock; 
-        DaoBebida daoBebidaMock; 
+        DaoLanche daoLancheMock;
+        DaoBebida daoBebidaMock;
 
         public comprarParaTesteUnitario(ValidadorCookie v, DaoPedido dp, DaoCliente dc, DaoLanche dl, DaoBebida db) {
             this.validadorMock = v;
@@ -90,7 +89,7 @@ public class comprarTest {
         when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("teste", "teste")});
 
         Cliente clienteFake = new Cliente();
-        clienteFake.setId_cliente(99); 
+        clienteFake.setId_cliente(99);
         when(daoCliente.pesquisaPorID(anyString())).thenReturn(clienteFake);
 
         mockInputStream(request, "{\"id\": 99}");
@@ -104,7 +103,7 @@ public class comprarTest {
 
         ArgumentCaptor<Pedido> pedidoCaptor = ArgumentCaptor.forClass(Pedido.class);
         verify(daoPedido).salvar(pedidoCaptor.capture());
-        
+
         Pedido pedidoCapturado = pedidoCaptor.getValue();
         assertNotNull(pedidoCapturado.getCliente());
         assertEquals(99, pedidoCapturado.getCliente().getId_cliente());
@@ -134,7 +133,7 @@ public class comprarTest {
         when(daoBebida.pesquisaPorNome("Refri")).thenReturn(bebidaFake);
 
         Pedido pedidoSalvo = new Pedido();
-        pedidoSalvo.setId_pedido(123); 
+        pedidoSalvo.setId_pedido(123);
         when(daoPedido.pesquisaPorData(any(Pedido.class))).thenReturn(pedidoSalvo);
 
         String jsonInput = "{\"id\": 1,\"Burguer\": [\"desc\", \"lanche\", 3],\"Refri\": [\"desc\", \"bebida\", 2]}";
@@ -164,7 +163,7 @@ public class comprarTest {
         HttpServletResponse response = mock(HttpServletResponse.class);
         ValidadorCookie validador = mock(ValidadorCookie.class);
 
-        when(validador.validar(any())).thenReturn(false); 
+        when(validador.validar(any())).thenReturn(false);
         when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("auth", "mock")});
 
         mockInputStream(request, "{}");
@@ -178,17 +177,17 @@ public class comprarTest {
     }
 
     // cobertura de metodos
-    
+
     @Test
     public void UNITARIO_testeMetodosProtegidos_GarantirInstancias() {
         // testa se os métodos getDao...() retornam instâncias válidas
-       
-        
+
+
         Comprar servletReal = new Comprar();
-        
+
         // 1. ValidadorCookie
         assertNotNull(servletReal.getValidadorCookie(), "getValidadorCookie() não deve retornar null");
-        
+
         // interceptar quando o DAO fizer "new DaoUtil()"
         try (MockedConstruction<DaoUtil> mockedDaoUtil = Mockito.mockConstruction(DaoUtil.class,
                 (mock, context) -> {
@@ -196,17 +195,17 @@ public class comprarTest {
                     when(mock.conecta()).thenReturn(conexaoFake);
                 })) {
 
- 
-            
+
+
             DaoCliente daoCliente = servletReal.getDaoCliente();
             assertNotNull(daoCliente, "getDaoCliente() não deve retornar null");
 
             DaoPedido daoPedido = servletReal.getDaoPedido();
             assertNotNull(daoPedido, "getDaoPedido() não deve retornar null");
-            
+
             DaoLanche daoLanche = servletReal.getDaoLanche();
             assertNotNull(daoLanche, "getDaoLanche() não deve retornar null");
-            
+
             DaoBebida daoBebida = servletReal.getDaoBebida();
             assertNotNull(daoBebida, "getDaoBebida() não deve retornar null");
         }
@@ -222,7 +221,7 @@ public class comprarTest {
 
         mockInputStream(request, "{}");
         when(request.getCookies()).thenThrow(new NullPointerException()); // Força Exception
-        
+
         StringWriter sw = new StringWriter();
         when(response.getWriter()).thenReturn(new PrintWriter(sw));
 
@@ -251,7 +250,7 @@ public class comprarTest {
         when(daoLanche.pesquisaPorNome("X-Fantasma")).thenReturn(null);
         when(daoBebida.pesquisaPorNome("Suco-Fantasma")).thenReturn(null);
 
-        
+
         String jsonInput = "{" +
                 "\"id\": 1," +
                 "\"Movel\": [\"desc\", \"mesa\", 1]," + // Tipo desconhecido
@@ -267,7 +266,7 @@ public class comprarTest {
         // Verifica que NADA foi vinculado (pois tudo era inválido)
         verify(daoPedido, never()).vincularLanche(any(), any());
         verify(daoPedido, never()).vincularBebida(any(), any());
-        
+
         // Verifica que mesmo assim tentou salvar o pedido (comportamento atual do código)
         verify(daoPedido).salvar(any(Pedido.class));
     }
@@ -284,7 +283,7 @@ public class comprarTest {
         when(validador.validar(any())).thenReturn(true);
         when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("auth", "ok")});
         when(daoCliente.pesquisaPorID(anyString())).thenReturn(new Cliente());
-        
+
         // DAO retorna null após salvar
         when(daoPedido.pesquisaPorData(any(Pedido.class))).thenReturn(null);
 
@@ -303,7 +302,7 @@ public class comprarTest {
         HttpServletResponse response = mock(HttpServletResponse.class);
         ValidadorCookie validador = mock(ValidadorCookie.class);
         mockInputStream(request, "{}");
-        
+
         when(validador.validar(any())).thenReturn(false);
         when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
 
@@ -313,7 +312,7 @@ public class comprarTest {
     }
 
     // integração com banco
-    
+
     public class comprarParaTesteIntegracao extends Comprar {
         ValidadorCookie validadorMock;
         public comprarParaTesteIntegracao(ValidadorCookie v) { this.validadorMock = v; }
@@ -328,7 +327,7 @@ public class comprarTest {
 
         when(validador.validar(any())).thenReturn(true);
         when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("sessao", "valida")});
-        mockInputStream(request, "{\"id\": 1}"); 
+        mockInputStream(request, "{\"id\": 1}");
 
         StringWriter sw = new StringWriter();
         when(response.getWriter()).thenReturn(new PrintWriter(sw));
@@ -337,23 +336,23 @@ public class comprarTest {
                 (mock, context) -> {
                     when(mock.conecta()).thenAnswer(invocation -> {
                         return DriverManager.getConnection(
-                            "jdbc:postgresql://localhost:5432/lanchonete", 
-                            "postgres", "123456"); 
+                            "jdbc:postgresql://localhost:5432/lanchonete",
+                            "postgres", "123456");
                     });
                 })) {
 
             try (java.sql.Connection conn = DriverManager.getConnection(
                     "jdbc:postgresql://localhost:5432/lanchonete", "postgres", "123456")) {
-                
+
                 // Limpeza e Preparação do Banco
                 java.sql.PreparedStatement stmtDelete = conn.prepareStatement(
                     "DELETE FROM tb_clientes WHERE id_cliente = 1");
-                try { stmtDelete.execute(); } catch (Exception ignore) {} 
+                try { stmtDelete.execute(); } catch (Exception ignore) {}
 
                 java.sql.PreparedStatement stmtInsert = conn.prepareStatement(
                     "INSERT INTO tb_clientes (id_cliente, nome, sobrenome, telefone, usuario, senha, fg_ativo) " +
                     "VALUES (1, 'Usuario', 'Teste', '1199999999', 'user_teste', '123', 1) " +
-                    "ON CONFLICT (id_cliente) DO NOTHING" 
+                    "ON CONFLICT (id_cliente) DO NOTHING"
                 );
                 stmtInsert.execute();
             }
@@ -363,7 +362,7 @@ public class comprarTest {
         }
 
         String saida = sw.toString();
-        assertTrue(saida.contains("Pedido Salvo") || saida.contains("ok"), 
+        assertTrue(saida.contains("Pedido Salvo") || saida.contains("ok"),
             "Falha na integração. Saída: " + saida);
     }
 }
