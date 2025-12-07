@@ -2,7 +2,7 @@ package Controllers;
 
 import io.github.bonigarcia.wdm.WebDriverManager;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions; 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.*;
@@ -11,9 +11,7 @@ import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.Select;
 import org.openqa.selenium.support.ui.WebDriverWait;
-import org.openqa.selenium.JavascriptExecutor; 
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.openqa.selenium.JavascriptExecutor;
 
 import java.time.Duration;
 
@@ -24,7 +22,7 @@ class salvarLancheSelenium {
 
     private final String BASE_URL = "http://localhost:8080/";
     // Constante para garantir que o nome do pão seja reutilizado
-    private final String INGREDIENTE_PAO_CADASTRADO = "Pão Australiano Selenium"; 
+    private final String INGREDIENTE_PAO_CADASTRADO = "Pão Australiano Selenium";
 
     @BeforeEach
     void setUp() {
@@ -35,9 +33,9 @@ class salvarLancheSelenium {
         options.addArguments("--remote-allow-origins=*");
 
 
-        driver = new ChromeDriver(options); 
+        driver = new ChromeDriver(options);
         driver.manage().window().maximize();
-        
+
         wait = new WebDriverWait(driver, Duration.ofSeconds(10));
     }
 
@@ -50,14 +48,14 @@ class salvarLancheSelenium {
 
     @Test
     void deveAcessarLoginFuncionarioECadastrarIngrediente() throws InterruptedException {
-        
-      
+
+
         JavascriptExecutor executor = (JavascriptExecutor) driver;
 
         // 1. Acessa a Home
         driver.get(BASE_URL + "/view/home/home.html");
-        
-      
+
+
         Thread.sleep(2000);
 
         // 2. Clicar em Acessar Cardápio
@@ -69,12 +67,12 @@ class salvarLancheSelenium {
             System.out.println("Botão de cardápio não necessário ou não encontrado.");
         }
 
-        // 3. Lidar com Alerta inicial 
+        // 3. Lidar com Alerta inicial
         try {
             Alert alerta = wait.until(ExpectedConditions.alertIsPresent());
             alerta.accept();
         } catch (TimeoutException e) {
-            // Se não aparecer alerta em 10s, segue 
+            // Se não aparecer alerta em 10s, segue
         }
 
         // 4. Navegar até o Login de Funcionário
@@ -90,7 +88,7 @@ class salvarLancheSelenium {
         WebElement botaoEntrar = driver.findElement(By.xpath("//button[contains(text(),'Entrar')]"));
 
         campoUsuario.sendKeys("admin");
-        campoSenha.sendKeys("admin"); 
+        campoSenha.sendKeys("admin");
         botaoEntrar.click();
 
         // 6. Acessar Cadastro de Ingredientes
@@ -100,7 +98,7 @@ class salvarLancheSelenium {
 
         // 7. Preencher Formulário de Cadastro (Pão - Pré-requisito)
         WebElement campoNome = wait.until(ExpectedConditions.visibilityOfElementLocated(By.name("nome")));
-        campoNome.sendKeys(INGREDIENTE_PAO_CADASTRADO); 
+        campoNome.sendKeys(INGREDIENTE_PAO_CADASTRADO);
 
         // Tipo (Usando Select para ser mais robusto)
         WebElement selectElement = driver.findElement(By.name("tipo"));
@@ -145,13 +143,13 @@ class salvarLancheSelenium {
         WebElement botaoEstoque = wait.until(ExpectedConditions.elementToBeClickable(By.linkText("Estoque")));
         botaoEstoque.click();
 
-        Thread.sleep(2000); 
-        
-        
+        Thread.sleep(2000);
+
+
         // --- INÍCIO DA FUNCIONALIDADE SALVAR LANCHE  ---
 
         // 11. garamtir a navegação para o Painel para que o botão 'Cadastrar Lanches' apareça.
-        driver.get(BASE_URL + "view/painel/painel.html"); 
+        driver.get(BASE_URL + "view/painel/painel.html");
 
         // 12. Clicar no botão "Cadastrar Lanches"
         wait.until(ExpectedConditions.elementToBeClickable(
@@ -160,28 +158,28 @@ class salvarLancheSelenium {
         // Espera o campo Nome da tela de lanches  para garantir o carregamento
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("nomeLanche")));
 
-     // 13. Preencher o Campo nome do Lanche 
-        WebElement campoNomeLanche = driver.findElement(By.id("nomeLanche")); 
-        campoNomeLanche.clear(); 
-        campoNomeLanche.sendKeys("Lanche"); 
-        
-  
+     // 13. Preencher o Campo nome do Lanche
+        WebElement campoNomeLanche = driver.findElement(By.id("nomeLanche"));
+        campoNomeLanche.clear();
+        campoNomeLanche.sendKeys("Lanche");
+
+
         executor.executeScript("arguments[0].dispatchEvent(new Event('change'));", campoNomeLanche);
         executor.executeScript("arguments[0].dispatchEvent(new Event('blur'));", campoNomeLanche);
-        Thread.sleep(500); 
+        Thread.sleep(500);
 
      // 14. Selecionar o pao
         WebElement selectElementPao = driver.findElement(By.id("selectPao"));
         Select selectPao = new Select(selectElementPao);
 
-       
+
         wait.until(ExpectedConditions.numberOfElementsToBeMoreThan(
             By.xpath("//select[@id='selectPao']/option"), 1)
         );
 
-        // Seleciona o pão 
+        // Seleciona o pão
         try {
-            selectPao.selectByVisibleText(INGREDIENTE_PAO_CADASTRADO); 
+            selectPao.selectByVisibleText(INGREDIENTE_PAO_CADASTRADO);
         } catch (NoSuchElementException e) {
             try {
                 selectPao.selectByIndex(1);
@@ -193,37 +191,37 @@ class salvarLancheSelenium {
 
         // 15. Preencher a descriçao
         WebElement campoDescricao = driver.findElement(By.id("textArea3"));
-        campoDescricao.clear(); 
-        campoDescricao.sendKeys("Lanche de queijo"); 
+        campoDescricao.clear();
+        campoDescricao.sendKeys("Lanche de queijo");
         executor.executeScript("arguments[0].dispatchEvent(new Event('change'));", campoDescricao); // Força evento
-        Thread.sleep(500); 
+        Thread.sleep(500);
 
-     // 16. Preencher o valor do Lanche 
+     // 16. Preencher o valor do Lanche
         WebElement campoPrecoLanche = driver.findElement(By.id("ValorLanche"));
-        campoPrecoLanche.clear(); 
-        campoPrecoLanche.sendKeys("10.00"); 
+        campoPrecoLanche.clear();
+        campoPrecoLanche.sendKeys("10.00");
         executor.executeScript("arguments[0].dispatchEvent(new Event('change'));", campoPrecoLanche); // Força evento
-        Thread.sleep(2000); 
+        Thread.sleep(2000);
 
      // 17. Clicar no botão Salvar
         WebElement botaoSalvarLanche = driver.findElement(By.name("salvar"));
 
-        // Executa o clique diretamente 
+        // Executa o clique diretamente
         executor.executeScript("arguments[0].click();", botaoSalvarLanche);
-        
-     
-        Thread.sleep(4000); 
-        
+
+
+        Thread.sleep(4000);
+
         // 18. Verificar Sucesso
         try {
             Alert alertaLanche = wait.until(ExpectedConditions.alertIsPresent());
             String textoAlerta = alertaLanche.getText();
             alertaLanche.accept();
-            
+
             // Verificação da Asserção: Agora deve conter "Lanche Salvo com Sucesso!"
-            Assertions.assertTrue(textoAlerta.contains("Lanche Salvo com Sucesso!"), 
+            Assertions.assertTrue(textoAlerta.contains("Lanche Salvo com Sucesso!"),
                                   "Falha! O Alerta não contém a mensagem de sucesso. Conteúdo retornado: " + textoAlerta);
-            
+
         } catch (TimeoutException e) {
             Assertions.fail("Tempo esgotado! Alert de sucesso não apareceu após salvar o lanche.");
         }

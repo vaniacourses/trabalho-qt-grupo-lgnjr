@@ -9,7 +9,6 @@ import org.openqa.selenium.support.ui.*;
 
 import java.time.Duration;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class EditarIngredienteSeleniumTest {
@@ -115,9 +114,9 @@ class EditarIngredienteSeleniumTest {
             WebElement celulaNome = wait.until(ExpectedConditions.elementToBeClickable(
                 By.xpath("//table[@id='tabelaIngredientes']//td[contains(text(), 'Australiano Selenium')]")
             ));
-            
+
             celulaNome.click();
-            
+
         } catch (TimeoutException e) {
             throw new RuntimeException("Não foi possível clicar na célula. O texto 'Australiano Selenium' não apareceu na tabela.", e);
         }
@@ -160,8 +159,8 @@ class EditarIngredienteSeleniumTest {
         alertaAlterar.accept();
 
         // 17. Página recarrega
-        driver.navigate().refresh(); 
-        
+        driver.navigate().refresh();
+
         // Apenas espera a tabela aparecer (sem exigir o texto ainda)
         WebElement tabelaAtualizada = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("tabelaIngredientes")));
         Thread.sleep(1000); // Pequena pausa para garantir renderização visual
@@ -188,7 +187,7 @@ class EditarIngredienteSeleniumTest {
                 .orElseThrow(() -> new RuntimeException("Erro ao buscar linha para validação final"));
 
         String textoLinha = linhaAtualizada.getText();
-        
+
         assertTrue(textoLinha.contains("Italiano Selenium"));
         assertTrue(textoLinha.contains("pao claro crocante"));
         assertTrue(textoLinha.contains("60"));

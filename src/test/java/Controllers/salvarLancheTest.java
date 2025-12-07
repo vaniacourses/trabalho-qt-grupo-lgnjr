@@ -8,8 +8,6 @@ import Model.Lanche;
 
 import org.junit.jupiter.api.*;
 import org.mockito.ArgumentCaptor;
-import org.mockito.MockedConstruction;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import javax.servlet.ReadListener;
@@ -19,10 +17,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import java.io.*;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.Connection;
-
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;

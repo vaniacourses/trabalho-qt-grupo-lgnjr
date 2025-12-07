@@ -1,11 +1,8 @@
 package Controllers;
 
 import DAO.DaoStatusLanchonete;
-import org.json.JSONException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
@@ -124,7 +121,7 @@ public class alterarStatusLanchoneteTest {
         assertTrue(responseWriter.toString().contains("\"status\":\"ABERTO\""));
     }
 
-    // 9) JSON malformado 
+    // 9) JSON malformado
     @Test
     void deveRetornarErroEmJsonMalformado() throws Exception {
         mockJsonBody("{status:,,,,}");
