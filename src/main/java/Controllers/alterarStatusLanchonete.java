@@ -12,7 +12,11 @@ import org.json.JSONObject;
 
 public class alterarStatusLanchonete extends HttpServlet {
 
-   private DaoStatusLanchonete dao;
+    private static final String FIELD_STATUS = "status";
+    private static final String STATUS_ABERTO = "ABERTO";
+
+
+   private final DaoStatusLanchonete dao;
    public alterarStatusLanchonete() {
        this.dao = new DaoStatusLanchonete();
    }
@@ -51,19 +55,19 @@ public class alterarStatusLanchonete extends HttpServlet {
                    JSONObject dados = new JSONObject(json);
                   
                    // Verificação se a chave existe antes de pegar (+1)
-                   if (dados.has("status")) {
+                   if (dados.has(FIELD_STATUS)) {
                       
-                       if (dados.isNull("status")) {
-                           processarStatusInvalido(response, this.dao);
+                       if (dados.isNull(FIELD_STATUS)) {
+                           processarStatusInvalido(response);
                            return;
                        }
                       
-                       String novoStatus = dados.getString("status");
+                       String novoStatus = dados.getString(FIELD_STATUS);
                        boolean statusValido = false;
                        // Quebrando a condicional composta em ifs separados
                        if (novoStatus != null) { // (+1)
                           
-                           if (novoStatus.equals("ABERTO")) { // (+1)
+                           if (novoStatus.equals(STATUS_ABERTO)) { // (+1)
                                statusValido = true;
                            } else {
                                // Else if conta como ponto de decisão (+1)
@@ -81,15 +85,15 @@ public class alterarStatusLanchonete extends HttpServlet {
                                enviarResposta(response, novoStatus);
                            } else {
                                // Caminho Alternativo: Status Inválido vira ABERTO
-                               processarStatusInvalido(response, this.dao);
+                               processarStatusInvalido(response);
                            }
                        } else {
                            // Caso status venha nulo no JSON
-                           processarStatusInvalido(response, this.dao);
+                           processarStatusInvalido(response);
                        }
                    } else {
                         // JSON sem campo status
-                       processarStatusInvalido(response, this.dao);
+                       processarStatusInvalido(response);
                    }
                } catch (JSONException e) {
                    // Tratamento de erro de parse (+1 implícito)
@@ -105,17 +109,20 @@ public class alterarStatusLanchonete extends HttpServlet {
        }
    }
    // Métodos auxiliares
-   private void processarStatusInvalido(HttpServletResponse response, DaoStatusLanchonete dao) throws IOException {
+   private void processarStatusInvalido(HttpServletResponse response) throws IOException {
        if (this.dao != null) { // (+1)
-           this.dao.alterarStatus("ABERTO");
+           this.dao.alterarStatus(STATUS_ABERTO);
        }
-       enviarResposta(response, "ABERTO");
+       enviarResposta(response, STATUS_ABERTO);
    }
    private void enviarResposta(HttpServletResponse response, String status) throws IOException {
        JSONObject jsonResponse = new JSONObject();
        try {
-           jsonResponse.put("status", status);
-       } catch (JSONException e) {}
+           jsonResponse.put(FIELD_STATUS, status);
+        } catch (JSONException e) {
+            // Tratamento simples para evitar bloco vazio
+            enviarErro(response);
+        }
       
        if (response != null) { // (+1)
            try (PrintWriter out = response.getWriter()) {
@@ -133,14 +140,29 @@ public class alterarStatusLanchonete extends HttpServlet {
            }
        }
    }
-   @Override
-   protected void doGet(HttpServletRequest request, HttpServletResponse response)
-           throws ServletException, IOException {
-       processRequest(request, response);
-   }
-   @Override
-   protected void doPost(HttpServletRequest request, HttpServletResponse response)
-           throws ServletException, IOException {
-       processRequest(request, response);
-   }
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) {
+        try {
+            processRequest(request, response);
+        } catch (ServletException | IOException e) {
+            try {
+                enviarErro(response);
+            } catch (IOException ex) {
+                // log opcional
+            }
+        }
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) {
+        try {
+            processRequest(request, response);
+        } catch (ServletException | IOException e) {
+            try {
+                enviarErro(response);
+            } catch (IOException ex) {
+                // log opcional
+            }
+        }
+    }
 }

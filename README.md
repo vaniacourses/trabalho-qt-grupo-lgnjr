@@ -21,6 +21,7 @@ Para atender aos requisitos da **Entrega 2**, cada membro ficou responsável pel
 | **Rodrigo** | `src/test/java/Controllers/EditarIngredienteSeleniumTest.java` | Sistema (Selenium) |
 | **Geiziane** | `src/java/Controllers/alterarIngrediente.java` | Unitário |
 | **Geiziane** | `src/test/java/Controllers/CadastrarIngredienteSelenium.java` | Sistema (Selenium) |
+| **Geiziane** | `src/test/java/Controllers/alterarIngredienteITTest.java` | Integração |
 | **João** | `src/java/Controllers/getIngredientesPorLanche.java` | Unitário | 
 
 ---
