@@ -11,8 +11,13 @@ FROM eclipse-temurin:8-jdk-jammy AS build
 WORKDIR /app
 
 # Copia todos os arquivos do projeto para dentro do container
-COPY . .
+COPY mvnw .
+COPY .mvn .mvn
+COPY pom.xml .
+COPY src src
 
+RUN ls -l /app
+RUN ls -l /app/.mvn
 # Executa o Maven para compilar o projeto e gerar o arquivo .war
 # O parâmetro -DskipTests faz com que os testes não sejam executados durante o build
 RUN chmod +x mvnw
