@@ -17,8 +17,6 @@ COPY pom.xml .
 COPY src src
 COPY web web
 
-RUN ls -l /app
-RUN ls -l /app/.mvn
 # Executa o Maven para compilar o projeto e gerar o arquivo .war
 # O parâmetro -DskipTests faz com que os testes não sejam executados durante o build
 RUN chmod +x mvnw
@@ -31,15 +29,13 @@ RUN ./mvnw package -DskipTests
 # Usa a imagem oficial do Tomcat 8 como base para rodar a aplicação
 FROM tomcat:8-jdk8-openjdk
 
+WORKDIR /app
+
 # Remove o webapp padrão do Tomcat (ROOT) para evitar conflitos
 RUN rm -rf /usr/local/tomcat/webapps/ROOT
 
-# Copia o arquivo .war gerado na etapa de build para o diretório de deploy do Tomcat
-# Renomeia para ROOT.war para que o app fique acessível em http://localhost:8080/
+# Copia o .war gerado na etapa de build
 COPY --from=build /app/target/*.war /usr/local/tomcat/webapps/ROOT.war
 
 # Expõe a porta 8080 do container (porta padrão do Tomcat)
 EXPOSE 8080
-
-# Não é necessário definir ENTRYPOINT ou CMD, pois o Tomcat já inicia automaticamente
-# quando o container é iniciado
