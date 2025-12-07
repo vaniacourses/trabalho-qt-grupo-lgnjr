@@ -79,7 +79,7 @@ Itens e evidências relacionadas aos requisitos avaliados.
 - **Relatório ISO 25010 (Atributos de Qualidade):** *https://docs.google.com/document/d/1U9sODUAbO4gxgEsVTI7mHnLLqilglDJC1jWOnhlMves/edit?usp=sharing*
 
 ### 6. 📚 Slide Segunda Apresentação
-- **Plano de Teste:** https://www.canva.com/design/DAG6O669z9I/QUKEbZ4lVN29T1iwatNkoA/edit
+Slide:  https://www.canva.com/design/DAG6O669z9I/QUKEbZ4lVN29T1iwatNkoA/edit
 -
 
 ---
