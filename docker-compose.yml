@@ -10,6 +10,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
+      # Inicializa o banco com o script SQL, se existir
       - ./banco.sql:/docker-entrypoint-initdb.d/banco.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -25,6 +26,7 @@ services:
       db:
         condition: service_healthy
     environment:
+      # Variáveis de ambiente para o Spring Boot conectar ao banco
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/lanchonete
       - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=postgres 
+      - SPRING_DATASOURCE_PASSWORD=123456

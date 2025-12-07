@@ -1,7 +1,7 @@
 package Controllers;
 
 import DAO.DaoIngrediente;
-import DAO.DaoUtil; // 
+import DAO.DaoUtil; //
 import Helpers.ValidadorCookie;
 import Model.Ingrediente;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 
-public class alterarIngredienteITTest { 
+public class alterarIngredienteITTest {
 
     private alterarIngrediente servlet;
     private ValidadorCookie validadorMock;
@@ -52,7 +52,7 @@ public class alterarIngredienteITTest {
             protected ValidadorCookie getValidadorCookie() {
                 return validadorMock;
             }
-      
+
         };
     }
 
@@ -79,16 +79,16 @@ public class alterarIngredienteITTest {
 
         when(request.getInputStream()).thenReturn(criarInput(json));
 
-        // INTERCEPTAÇÃO DA CONEXÃO DO DAO 
-  
-        // Quando o DaoIngrediente fizer "new DaoUtil()", intercepta e 
+        // INTERCEPTAÇÃO DA CONEXÃO DO DAO
+
+        // Quando o DaoIngrediente fizer "new DaoUtil()", intercepta e
         // manda o método .conecta() retornar uma conexão real para o LOCALHOST.
         try (MockedConstruction<DaoUtil> mockedDaoUtil = Mockito.mockConstruction(DaoUtil.class,
                 (mock, context) -> {
-                    when(mock.conecta()).thenAnswer(invocation -> 
+                    when(mock.conecta()).thenAnswer(invocation ->
                         DriverManager.getConnection(
                             "jdbc:postgresql://localhost:5432/lanchonete", // URL Local
-                            "postgres", 
+                            "postgres",
                             "123456" // Senha do seu banco local/docker
                         )
                     );
