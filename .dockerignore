@@ -50,7 +50,6 @@ README.md
 **/target
 *.ctxt
 .mtj.tmp
-.mvn/timing.properties
 buildNumber.properties
 dependency-reduced-pom.xml
 hs_err_pid*

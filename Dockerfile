@@ -15,6 +15,7 @@ COPY . .
 
 # Executa o Maven para compilar o projeto e gerar o arquivo .war
 # O parâmetro -DskipTests faz com que os testes não sejam executados durante o build
+RUN chmod +x mvnw
 RUN ./mvnw package -DskipTests
 
 ################################################################################
