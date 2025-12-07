@@ -15,6 +15,7 @@ COPY mvnw .
 COPY .mvn .mvn
 COPY pom.xml .
 COPY src src
+COPY web web
 
 RUN ls -l /app
 RUN ls -l /app/.mvn
