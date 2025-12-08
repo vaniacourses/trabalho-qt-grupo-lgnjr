@@ -64,103 +64,71 @@ public class getIngredientesPorLanche extends HttpServlet {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
-        BufferedReader br = null;
-        // Verificação defensiva do request (+1)
-        if (request != null) {
-            br = new BufferedReader(new InputStreamReader(request.getInputStream()));
+        // Verificação defensiva do request, daoIngrediente e gson
+        if (request == null || daoIngrediente == null || gson == null) {
+            enviarErro(response);
+            return;
         }
 
+        BufferedReader br = new BufferedReader(new InputStreamReader(request.getInputStream()));
         String incomingJson = "";
 
         ////////Validar Cookie
         boolean resultado = false;
 
-        try{
-            // Validação extra dentro do try (+1)
-            if (request != null) {
-                Cookie[] cookies = request.getCookies();
-
-                // Validação de array de cookies (+1)
-                if (cookies != null) {
-                    // Validação da instância do helper (+1)
-                    if (validador != null) {
-                        resultado = validador.validarFuncionario(cookies);
-                    }
-                }
-            }
-        } catch(java.lang.NullPointerException e){
-            // Catch conta como ponto de decisão (+1)
-            logger.warning("Erro na validação do Cookie: " + e.getMessage());
-        }
-        //////////////
-
-        // Decompondo 'if((br != null) && resultado)' em estrutura aninhada
-
-        if (br != null) { // (+1)
-
-            if (resultado) { // (+1)
-
-                incomingJson = br.readLine();
-
-                // Verifica se leu algo do buffer (+1)
-                if (incomingJson != null) {
-
-                    // Verifica se não está vazio (+1)
-                    if (!incomingJson.trim().isEmpty()) {
-
-                        byte[] bytes = incomingJson.getBytes(ISO_8859_1);
-                        String jsonStr = new String(bytes, UTF_8);
-                        JSONObject dados = new JSONObject(jsonStr);
-
-                        // Verifica se o JSON foi criado corretamente (+1)
-                        if (dados != null) {
-
-                            // Verifica se a chave ID existe antes de acessar (+1)
-                            if (dados.has("id")) {
-                                // Verifica se o DAO foi instanciado (+1)
-                                if (daoIngrediente != null) {
-                                    List<Ingrediente> ingredientes = daoIngrediente.listarTodosPorLanche(dados.getInt("id"));
-
-                                    // Verifica se a lista retornada não é nula (+1)
-                                    if (ingredientes != null) {
-                                        String json = gson.toJson(ingredientes);
-
-                                        try (PrintWriter out = response.getWriter()) {
-                                            // Verifica se o Writer não é nulo (+1)
-                                            if (out != null) {
-                                                out.print(json);
-                                                out.flush();
-                                            }
-                                        }
-                                    } else {
-                                        // Lista nula (erro de banco?)
-                                        enviarErro(response);
-                                    }
-                                } else {
-                                    enviarErro(response);
-                                }
-                            } else {
-                                // JSON sem ID
-                                enviarErro(response);
-                            }
-                        } else {
-                            enviarErro(response);
-                        }
-                    } else {
-                        // JSON string vazia
-                        enviarErro(response);
-                    }
-                } else {
-                    // Buffer retornou linha nula
-                    enviarErro(response);
-                }
-            } else {
-                // Falha de autenticação (resultado = false)
-                enviarErro(response);
+        if (validador != null && request != null) {
+            Cookie[] cookies = request.getCookies();
+            // Validação de array de cookies (+1)
+            if (cookies != null && validador != null) {
+                resultado = validador.validarFuncionario(cookies);
             }
         } else {
-            // Falha no BufferedReader
+            // Catch conta como ponto de decisão (+1)
+            logger.warning("Request ou Validador nulos na validação do Cookie");
+        }
+
+        if (!resultado) { // (+1)
+            // Falha na autenticação do resultado
             enviarErro(response);
+            return;
+        }
+
+        incomingJson = br.readLine();
+
+        // Verifica se leu algo do buffer (+1)
+        if (incomingJson == null || incomingJson.trim().isEmpty()) {
+            enviarErro(response);
+            return;
+        }
+
+        byte[] bytes = incomingJson.getBytes(ISO_8859_1);
+        String jsonStr = new String(bytes, UTF_8);
+        JSONObject dados = new JSONObject(jsonStr);
+
+        // Verifica se a chave ID existe antes de acessar (+1)
+        if (!dados.has("id")) {
+            // JSON sem ID
+            enviarErro(response);
+            return;
+        }
+
+        List<Ingrediente> ingredientes = daoIngrediente.listarTodosPorLanche(dados.getInt("id"));
+
+        // Verifica se a lista retornada não é nula (+1)
+        if (ingredientes == null) {
+            // Lista nula (erro de banco?)
+            enviarErro(response);
+            return;
+        }
+
+        try (PrintWriter out = response.getWriter()) {
+            // Verifica se o Writer não é nulo (+1)
+            if (out == null) {
+                return;
+            }
+            String json = gson.toJson(ingredientes);
+            out.print(json);
+            out.flush();
         }
     }
 
