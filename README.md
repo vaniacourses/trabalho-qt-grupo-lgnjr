@@ -78,7 +78,7 @@ Itens e evidências relacionadas aos requisitos avaliados.
 - **Plano de Teste:** *https://docs.google.com/document/d/1Obq0Ee-HCQhP71YuqeNLDTcpW3OKBTwuY8DSv9ThhRU/edit?tab=t.0*
 - **Relatório ISO 25010 (Atributos de Qualidade):** *https://docs.google.com/document/d/1U9sODUAbO4gxgEsVTI7mHnLLqilglDJC1jWOnhlMves/edit?usp=sharing*
 
-### 6. 📚 Slide Segunda Apresentação
+### 6. 📚 Slide Segunda Apresentação Atualizado com Print de técnicas funcionais 
 Slide:  https://www.canva.com/design/DAG6O669z9I/QUKEbZ4lVN29T1iwatNkoA/edit
 -
 
