@@ -31,7 +31,7 @@ import DAO.DaoIngrediente;
 import Helpers.ValidadorCookie;
 import Model.Ingrediente;
 
-public class getIngredientesPorLancheTest {
+class getIngredientesPorLancheTest {
 
     @Mock HttpServletRequest request;
     @Mock HttpServletResponse response;
@@ -39,12 +39,12 @@ public class getIngredientesPorLancheTest {
     @Mock DaoIngrediente daoIngredienteMock;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         MockitoAnnotations.openMocks(this);
     }
 
     @Test
-    public void UNITARIO_FluxoFeliz_RetornaListaDeIngredientes() throws Exception {
+    void UNITARIO_FluxoFeliz_RetornaListaDeIngredientes() throws Exception {
         // 1. Configura Login OK
         when(validadorMock.validarFuncionario(any())).thenReturn(true);
         when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("auth", "ok")});
@@ -75,7 +75,7 @@ public class getIngredientesPorLancheTest {
     }
 
     @Test
-    public void UNITARIO_SemPermissao_RetornaErro() throws Exception {
+    void UNITARIO_SemPermissao_RetornaErro() throws Exception {
         when(validadorMock.validarFuncionario(any())).thenReturn(false);
         when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("auth", "bad")});
         mockInputStream("{}");
@@ -91,7 +91,7 @@ public class getIngredientesPorLancheTest {
     }
 
     @Test
-    public void UNITARIO_JsonSemId_RetornaErro() throws Exception {
+    void UNITARIO_JsonSemId_RetornaErro() throws Exception {
         when(validadorMock.validarFuncionario(any())).thenReturn(true);
         when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("auth", "ok")});
 
@@ -107,7 +107,7 @@ public class getIngredientesPorLancheTest {
     }
 
     @Test
-    public void UNITARIO_DaoRetornaNulo_RetornaErro() throws Exception {
+    void UNITARIO_DaoRetornaNulo_RetornaErro() throws Exception {
         when(validadorMock.validarFuncionario(any())).thenReturn(true);
         when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("auth", "ok")});
         mockInputStream("{\"id\": 5}");
