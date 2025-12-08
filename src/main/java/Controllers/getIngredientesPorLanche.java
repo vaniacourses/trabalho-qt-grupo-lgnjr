@@ -16,6 +16,8 @@ import java.io.PrintWriter;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import java.util.List;
+import java.util.logging.Logger;
+
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
@@ -32,6 +34,8 @@ public class getIngredientesPorLanche extends HttpServlet {
     private final ValidadorCookie validador;
     private final DaoIngrediente daoIngrediente;
     private final Gson gson;
+
+    private final Logger logger = Logger.getLogger(getClass().getName());
 
     public getIngredientesPorLanche(ValidadorCookie v, DaoIngrediente d, Gson g) {
         this.validador = v;
@@ -53,112 +57,82 @@ public class getIngredientesPorLanche extends HttpServlet {
             throws ServletException, IOException {
 
         // Verificação defensiva do response (+1)
-        if (response != null) {
-            response.setContentType("application/json");
-            response.setCharacterEncoding("UTF-8");
+        if (response == null) {
+            return;
         }
 
-        BufferedReader br = null;
-        // Verificação defensiva do request (+1)
-        if (request != null) {
-            br = new BufferedReader(new InputStreamReader(request.getInputStream()));
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        // Verificação defensiva do request, daoIngrediente e gson
+        if (request == null || daoIngrediente == null || gson == null) {
+            enviarErro(response);
+            return;
         }
 
-        String IncomingJson = "";
+        BufferedReader br = new BufferedReader(new InputStreamReader(request.getInputStream()));
+
+        if (validador == null) {
+            logger.warning("Validador nulo na validação do Cookie");
+            enviarErro(response);
+            return;
+        }
 
         ////////Validar Cookie
         boolean resultado = false;
+        Cookie[] cookies = request.getCookies();
 
-        try{
-            // Validação extra dentro do try (+1)
-            if (request != null) {
-                Cookie[] cookies = request.getCookies();
-
-                // Validação de array de cookies (+1)
-                if (cookies != null) {
-                    // Validação da instância do helper (+1)
-                    if (validador != null) {
-                        resultado = validador.validarFuncionario(cookies);
-                    }
-                }
-            }
-        } catch(java.lang.NullPointerException e){
-            // Catch conta como ponto de decisão (+1)
-            System.out.println(e);
-        }
-        //////////////
-
-        // Decompondo 'if((br != null) && resultado)' em estrutura aninhada
-
-        if (br != null) { // (+1)
-
-            if (resultado) { // (+1)
-
-                IncomingJson = br.readLine();
-
-                // Verifica se leu algo do buffer (+1)
-                if (IncomingJson != null) {
-
-                    // Verifica se não está vazio (+1)
-                    if (!IncomingJson.trim().isEmpty()) {
-
-                        byte[] bytes = IncomingJson.getBytes(ISO_8859_1);
-                        String jsonStr = new String(bytes, UTF_8);
-                        JSONObject dados = new JSONObject(jsonStr);
-
-                        // Verifica se o JSON foi criado corretamente (+1)
-                        if (dados != null) {
-
-                            // Verifica se a chave ID existe antes de acessar (+1)
-                            if (dados.has("id")) {
-
-                                // System.out.println(dados.getInt("id"));
-
-                                // Verifica se o DAO foi instanciado (+1)
-                                if (daoIngrediente != null) {
-                                    List<Ingrediente> ingredientes = daoIngrediente.listarTodosPorLanche(dados.getInt("id"));
-
-                                    // Verifica se a lista retornada não é nula (+1)
-                                    if (ingredientes != null) {
-                                        Gson gson = new Gson();
-                                        String json = gson.toJson(ingredientes);
-
-                                        try (PrintWriter out = response.getWriter()) {
-                                            // Verifica se o Writer não é nulo (+1)
-                                            if (out != null) {
-                                                out.print(json);
-                                                out.flush();
-                                            }
-                                        }
-                                    } else {
-                                        // Lista nula (erro de banco?)
-                                        enviarErro(response);
-                                    }
-                                } else {
-                                    enviarErro(response);
-                                }
-                            } else {
-                                // JSON sem ID
-                                enviarErro(response);
-                            }
-                        } else {
-                            enviarErro(response);
-                        }
-                    } else {
-                        // JSON string vazia
-                        enviarErro(response);
-                    }
-                } else {
-                    // Buffer retornou linha nula
-                    enviarErro(response);
-                }
-            } else {
-                // Falha de autenticação (resultado = false)
-                enviarErro(response);
-            }
-        } else {
-            // Falha no BufferedReader
+        // Validação de array de cookies (+1)
+        if (cookies == null) {
+            logger.warning("Cookies nulos");
             enviarErro(response);
+            return;
+        }
+
+        resultado = validador.validarFuncionario(cookies);
+        if (!resultado) { // (+1)
+            // Falha na autenticação do resultado
+            logger.warning("Falha na autenticação dos cookies");
+            enviarErro(response);
+            return;
+        }
+
+        String incomingJson = br.readLine();
+
+        // Verifica se leu algo do buffer (+1)
+        if (incomingJson == null || incomingJson.trim().isEmpty()) {
+            enviarErro(response);
+            return;
+        }
+
+        byte[] bytes = incomingJson.getBytes(ISO_8859_1);
+        String jsonStr = new String(bytes, UTF_8);
+        JSONObject dados = new JSONObject(jsonStr);
+
+        // Verifica se a chave ID existe antes de acessar (+1)
+        if (!dados.has("id")) {
+            // JSON sem ID
+            enviarErro(response);
+            return;
+        }
+
+        List<Ingrediente> ingredientes = daoIngrediente.listarTodosPorLanche(dados.getInt("id"));
+
+        // Verifica se a lista retornada não é nula (+1)
+        if (ingredientes == null) {
+            // Lista nula (erro de banco?)
+            enviarErro(response);
+            return;
+        }
+
+        try (PrintWriter out = response.getWriter()) {
+            // Verifica se o Writer não é nulo (+1)
+            if (out == null) {
+                return;
+            }
+            String json = gson.toJson(ingredientes);
+            out.print(json);
+            out.flush();
         }
     }
 
@@ -186,7 +160,11 @@ public class getIngredientesPorLanche extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        processRequest(request, response);
+        try {
+            processRequest(request, response);
+        } catch (Exception e) {
+            logger.severe("Erro no doGet: " + e.getMessage());
+        }
     }
 
     /**
@@ -200,7 +178,11 @@ public class getIngredientesPorLanche extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        processRequest(request, response);
+        try {
+            processRequest(request, response);
+        } catch (Exception e) {
+            logger.severe("Erro no doPost: " + e.getMessage());
+        }
     }
 
     /**

@@ -1,10 +1,12 @@
 package Controllers;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
@@ -31,7 +33,7 @@ import DAO.DaoIngrediente;
 import Helpers.ValidadorCookie;
 import Model.Ingrediente;
 
-public class getIngredientesPorLancheTest {
+class getIngredientesPorLancheTest {
 
     @Mock HttpServletRequest request;
     @Mock HttpServletResponse response;
@@ -39,12 +41,12 @@ public class getIngredientesPorLancheTest {
     @Mock DaoIngrediente daoIngredienteMock;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         MockitoAnnotations.openMocks(this);
     }
 
     @Test
-    public void UNITARIO_FluxoFeliz_RetornaListaDeIngredientes() throws Exception {
+    void UNITARIO_FluxoFeliz_RetornaListaDeIngredientes() throws Exception {
         // 1. Configura Login OK
         when(validadorMock.validarFuncionario(any())).thenReturn(true);
         when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("auth", "ok")});
@@ -75,7 +77,191 @@ public class getIngredientesPorLancheTest {
     }
 
     @Test
-    public void UNITARIO_SemPermissao_RetornaErro() throws Exception {
+    void UNITARIO_ResponseNull_RetornaListaDeIngredientesVazia() throws Exception {
+        // 1. Configura Login OK
+        when(validadorMock.validarFuncionario(any())).thenReturn(true);
+        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("auth", "ok")});
+
+        // 2. Simula JSON de entrada {"id": 10}
+        mockInputStream("{\"id\": 10}");
+
+        // 3. Captura Resposta
+        StringWriter sw = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(sw));
+
+        // 4. Executa (injeção via construtor)
+        getIngredientesPorLanche servlet = new getIngredientesPorLanche(validadorMock, daoIngredienteMock, new Gson());
+        servlet.processRequest(request, null);
+
+        // 5. Verifica se saída está vazia
+        String saida = sw.toString();
+        assertTrue(saida.isEmpty(), "Deveria retornar saida vazia");
+        verifyNoInteractions(daoIngredienteMock);
+    }
+
+    @Test
+    void UNITARIO_RequestNull_RetornaListaDeIngredientesComErro() throws Exception {
+        // 1. Configura Login OK
+        when(validadorMock.validarFuncionario(any())).thenReturn(true);
+        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("auth", "ok")});
+
+        // 2. Simula JSON de entrada {"id": 10}
+        mockInputStream("{\"id\": 10}");
+
+        // 3. Captura Resposta
+        StringWriter sw = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(sw));
+
+        // 4. Executa (injeção via construtor)
+        getIngredientesPorLanche servlet = new getIngredientesPorLanche(validadorMock, daoIngredienteMock, new Gson());
+        servlet.processRequest(null, response);
+
+        // 5. Verifica se saída igual a erro
+        String saida = sw.toString();
+        assertEquals("erro", saida.trim(), "Deveria retornar saida com erro");
+        verifyNoInteractions(daoIngredienteMock);
+    }
+
+    @Test
+    void UNITARIO_DaoIngredienteNull_RetornaListaDeIngredientesComErro() throws Exception {
+        // 1. Configura Login OK
+        when(validadorMock.validarFuncionario(any())).thenReturn(true);
+        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("auth", "ok")});
+
+        // 2. Simula JSON de entrada {"id": 10}
+        mockInputStream("{\"id\": 10}");
+
+        // 3. Captura Resposta
+        StringWriter sw = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(sw));
+
+        // 4. Executa (injeção via construtor)
+        getIngredientesPorLanche servlet = new getIngredientesPorLanche(validadorMock, null, new Gson());
+        servlet.processRequest(request, response);
+
+        // 5. Verifica se saída igual a erro
+        String saida = sw.toString();
+        assertEquals("erro", saida.trim(), "Deveria retornar saida com erro");
+        verifyNoInteractions(daoIngredienteMock);
+    }
+
+    @Test
+    void UNITARIO_GsonNull_RetornaListaDeIngredientesComErro() throws Exception {
+        // 1. Configura Login OK
+        when(validadorMock.validarFuncionario(any())).thenReturn(true);
+        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("auth", "ok")});
+
+        // 2. Simula JSON de entrada {"id": 10}
+        mockInputStream("{\"id\": 10}");
+
+        // 3. Captura Resposta
+        StringWriter sw = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(sw));
+
+        // 4. Executa (injeção via construtor)
+        getIngredientesPorLanche servlet = new getIngredientesPorLanche(validadorMock, daoIngredienteMock, null);
+        servlet.processRequest(request, response);
+
+        // 5. Verifica se saída igual a erro
+        String saida = sw.toString();
+        assertEquals("erro", saida.trim(), "Deveria retornar saida com erro");
+        verifyNoInteractions(daoIngredienteMock);
+    }
+
+    @Test
+    void UNITARIO_ValidadorNull_RetornaListaDeIngredientesComErro() throws Exception {
+        // 1. Configura Login OK
+        when(validadorMock.validarFuncionario(any())).thenReturn(true);
+        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("auth", "ok")});
+
+        // 2. Simula JSON de entrada {"id": 10}
+        mockInputStream("{\"id\": 10}");
+
+        // 3. Captura Resposta
+        StringWriter sw = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(sw));
+
+        // 4. Executa (injeção via construtor)
+        getIngredientesPorLanche servlet = new getIngredientesPorLanche(null, daoIngredienteMock, new Gson());
+        servlet.processRequest(request, response);
+
+        // 5. Verifica se saída igual a erro
+        String saida = sw.toString();
+        assertEquals("erro", saida.trim(), "Deveria retornar saida com erro");
+        verifyNoInteractions(daoIngredienteMock);
+    }
+
+    @Test
+    void UNITARIO_GetCookiesNull_RetornaListaDeIngredientesComErro() throws Exception {
+        // 1. Configura Login OK
+        when(validadorMock.validarFuncionario(any())).thenReturn(true);
+        when(request.getCookies()).thenReturn(null);
+
+        // 2. Simula JSON de entrada
+        mockInputStream("");
+
+        // 3. Captura Resposta
+        StringWriter sw = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(sw));
+
+        // 4. Executa (injeção via construtor)
+        getIngredientesPorLanche servlet = new getIngredientesPorLanche(validadorMock, daoIngredienteMock, new Gson());
+        servlet.processRequest(request, response);
+
+        // 5. Verifica se saída igual a erro
+        String saida = sw.toString();
+        assertEquals("erro", saida.trim(), "Deveria retornar saida com erro");
+        verifyNoInteractions(daoIngredienteMock);
+    }
+
+    @Test
+    void UNITARIO_JsonDeInputVazio_RetornaListaDeIngredientesComErro() throws Exception {
+        // 1. Configura Login OK
+        when(validadorMock.validarFuncionario(any())).thenReturn(true);
+        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("auth", "ok")});
+
+        // 2. Simula JSON de entrada
+        mockInputStream("");
+
+        // 3. Captura Resposta
+        StringWriter sw = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(sw));
+
+        // 4. Executa (injeção via construtor)
+        getIngredientesPorLanche servlet = new getIngredientesPorLanche(validadorMock, daoIngredienteMock, new Gson());
+        servlet.processRequest(request, response);
+
+        // 5. Verifica se saída igual a erro
+        String saida = sw.toString();
+        assertEquals("erro", saida.trim(), "Deveria retornar saida com erro");
+        verifyNoInteractions(daoIngredienteMock);
+    }
+
+    @Test
+    void UNITARIO_JsonDeInputSemId_RetornaListaDeIngredientesComErro() throws Exception {
+        // 1. Configura Login OK
+        when(validadorMock.validarFuncionario(any())).thenReturn(true);
+        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("auth", "ok")});
+
+        // 2. Simula JSON de entrada sem id
+        mockInputStream("{}");
+
+        // 3. Captura Resposta
+        StringWriter sw = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(sw));
+
+        // 4. Executa (injeção via construtor)
+        getIngredientesPorLanche servlet = new getIngredientesPorLanche(validadorMock, daoIngredienteMock, new Gson());
+        servlet.processRequest(request, response);
+
+        // 5. Verifica se saída igual a erro
+        String saida = sw.toString();
+        assertEquals("erro", saida.trim(), "Deveria retornar saida com erro");
+        verifyNoInteractions(daoIngredienteMock);
+    }
+
+    @Test
+    void UNITARIO_SemPermissao_RetornaErro() throws Exception {
         when(validadorMock.validarFuncionario(any())).thenReturn(false);
         when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("auth", "bad")});
         mockInputStream("{}");
@@ -91,7 +277,7 @@ public class getIngredientesPorLancheTest {
     }
 
     @Test
-    public void UNITARIO_JsonSemId_RetornaErro() throws Exception {
+    void UNITARIO_JsonSemId_RetornaErro() throws Exception {
         when(validadorMock.validarFuncionario(any())).thenReturn(true);
         when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("auth", "ok")});
 
@@ -107,7 +293,7 @@ public class getIngredientesPorLancheTest {
     }
 
     @Test
-    public void UNITARIO_DaoRetornaNulo_RetornaErro() throws Exception {
+    void UNITARIO_DaoRetornaNulo_RetornaErro() throws Exception {
         when(validadorMock.validarFuncionario(any())).thenReturn(true);
         when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("auth", "ok")});
         mockInputStream("{\"id\": 5}");
@@ -121,6 +307,17 @@ public class getIngredientesPorLancheTest {
         servlet.processRequest(request, response);
 
         assertTrue(sw.toString().contains("erro"), "Lista nula deve retornar erro");
+    }
+
+
+    @Test
+    void UNITARIO_getServelertInfo_RetornaShortDescription() throws Exception {
+        // Executa (injeção via construtor)
+        getIngredientesPorLanche servlet = new getIngredientesPorLanche(validadorMock, daoIngredienteMock, new Gson());
+        String info = servlet.getServletInfo();
+
+        assertEquals("Short description", info, "Deveria retornar Short description");
+        verifyNoInteractions(daoIngredienteMock);
     }
 
     // Helper para simular o corpo da requisição (JSON)
