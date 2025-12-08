@@ -109,7 +109,7 @@ class CadastrarIngredienteSelenium {
             Alert alertaSucesso = wait.until(ExpectedConditions.alertIsPresent());
             String textoAlerta = alertaSucesso.getText();
 
-   
+
 
             // Usa trim() para remover \n, \r, espaços extras no fim/início
             assertEquals(
@@ -123,8 +123,8 @@ class CadastrarIngredienteSelenium {
         } catch (TimeoutException e) {
             fail("O alerta de sucesso não apareceu!");
         }
-        
-        
+
+
         // 10. Ir para Estoque
         wait.until(ExpectedConditions.elementToBeClickable(By.linkText("Estoque"))).click();
         Thread.sleep(5000);

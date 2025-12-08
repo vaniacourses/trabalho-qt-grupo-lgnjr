@@ -30,12 +30,12 @@ import org.json.JSONObject;
 public class getIngredientesPorLanche extends HttpServlet {
 
     private final ValidadorCookie validador;
-    private final DaoIngrediente dao;
+    private final DaoIngrediente daoIngrediente;
     private final Gson gson;
 
     public getIngredientesPorLanche(ValidadorCookie v, DaoIngrediente d, Gson g) {
         this.validador = v;
-        this.dao = d;
+        this.daoIngrediente = d;
         this.gson = g;
     }
 
@@ -51,15 +51,13 @@ public class getIngredientesPorLanche extends HttpServlet {
      */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
+
         // Verificação defensiva do response (+1)
         if (response != null) {
             response.setContentType("application/json");
             response.setCharacterEncoding("UTF-8");
         }
-        
-        System.out.println("Testeee");
-        
+
         BufferedReader br = null;
         // Verificação defensiva do request (+1)
         if (request != null) {
@@ -67,22 +65,20 @@ public class getIngredientesPorLanche extends HttpServlet {
         }
 
         String IncomingJson = "";
-        
+
         ////////Validar Cookie
         boolean resultado = false;
-        
+
         try{
             // Validação extra dentro do try (+1)
             if (request != null) {
                 Cookie[] cookies = request.getCookies();
-                
+
                 // Validação de array de cookies (+1)
                 if (cookies != null) {
-                    ValidadorCookie validar = new ValidadorCookie();
-                    
                     // Validação da instância do helper (+1)
-                    if (validar != null) {
-                        resultado = validar.validarFuncionario(cookies);
+                    if (validador != null) {
+                        resultado = validador.validarFuncionario(cookies);
                     }
                 }
             }
@@ -91,38 +87,37 @@ public class getIngredientesPorLanche extends HttpServlet {
             System.out.println(e);
         }
         //////////////
-        
+
         // Decompondo 'if((br != null) && resultado)' em estrutura aninhada
-        
+
         if (br != null) { // (+1)
-            
+
             if (resultado) { // (+1)
-                
+
                 IncomingJson = br.readLine();
-                
+
                 // Verifica se leu algo do buffer (+1)
                 if (IncomingJson != null) {
-                    
+
                     // Verifica se não está vazio (+1)
                     if (!IncomingJson.trim().isEmpty()) {
-                        
-                        byte[] bytes = IncomingJson.getBytes(ISO_8859_1); 
-                        String jsonStr = new String(bytes, UTF_8);            
+
+                        byte[] bytes = IncomingJson.getBytes(ISO_8859_1);
+                        String jsonStr = new String(bytes, UTF_8);
                         JSONObject dados = new JSONObject(jsonStr);
-                        
+
                         // Verifica se o JSON foi criado corretamente (+1)
                         if (dados != null) {
-                            
+
                             // Verifica se a chave ID existe antes de acessar (+1)
                             if (dados.has("id")) {
-                            
-                                DaoIngrediente ingredienteDAO = new DaoIngrediente();
-                                System.out.println(dados.getInt("id"));
+
+                                // System.out.println(dados.getInt("id"));
 
                                 // Verifica se o DAO foi instanciado (+1)
-                                if (ingredienteDAO != null) {
-                                    List<Ingrediente> ingredientes = ingredienteDAO.listarTodosPorLanche(dados.getInt("id"));
-                                    
+                                if (daoIngrediente != null) {
+                                    List<Ingrediente> ingredientes = daoIngrediente.listarTodosPorLanche(dados.getInt("id"));
+
                                     // Verifica se a lista retornada não é nula (+1)
                                     if (ingredientes != null) {
                                         Gson gson = new Gson();

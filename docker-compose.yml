@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:13
@@ -30,3 +28,12 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/lanchonete
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=123456
+
+  tests:
+    build:
+      context: .
+      target: build   # usa a etapa "build" do Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["./mvnw", "test"]
