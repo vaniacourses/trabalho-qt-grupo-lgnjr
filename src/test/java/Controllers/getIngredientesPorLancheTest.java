@@ -71,6 +71,7 @@ public class getIngredientesPorLancheTest {
         String saida = sw.toString();
         assertTrue(saida.contains("Bacon"), "Deveria retornar o JSON com ingredientes");
         verify(daoIngredienteMock).listarTodosPorLanche(10);
+        System.out.println(saida);
     }
 
     @Test
