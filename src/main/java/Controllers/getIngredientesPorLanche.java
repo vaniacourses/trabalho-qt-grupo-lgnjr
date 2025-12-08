@@ -16,6 +16,8 @@ import java.io.PrintWriter;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import java.util.List;
+import java.util.logging.Logger;
+
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
@@ -32,6 +34,8 @@ public class getIngredientesPorLanche extends HttpServlet {
     private final ValidadorCookie validador;
     private final DaoIngrediente daoIngrediente;
     private final Gson gson;
+
+    private final Logger logger = Logger.getLogger(getClass().getName());
 
     public getIngredientesPorLanche(ValidadorCookie v, DaoIngrediente d, Gson g) {
         this.validador = v;
@@ -53,10 +57,12 @@ public class getIngredientesPorLanche extends HttpServlet {
             throws ServletException, IOException {
 
         // Verificação defensiva do response (+1)
-        if (response != null) {
-            response.setContentType("application/json");
-            response.setCharacterEncoding("UTF-8");
+        if (response == null) {
+            return;
         }
+
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
 
         BufferedReader br = null;
         // Verificação defensiva do request (+1)
@@ -64,7 +70,7 @@ public class getIngredientesPorLanche extends HttpServlet {
             br = new BufferedReader(new InputStreamReader(request.getInputStream()));
         }
 
-        String IncomingJson = "";
+        String incomingJson = "";
 
         ////////Validar Cookie
         boolean resultado = false;
@@ -84,7 +90,7 @@ public class getIngredientesPorLanche extends HttpServlet {
             }
         } catch(java.lang.NullPointerException e){
             // Catch conta como ponto de decisão (+1)
-            System.out.println(e);
+            logger.warning("Erro na validação do Cookie: " + e.getMessage());
         }
         //////////////
 
@@ -94,15 +100,15 @@ public class getIngredientesPorLanche extends HttpServlet {
 
             if (resultado) { // (+1)
 
-                IncomingJson = br.readLine();
+                incomingJson = br.readLine();
 
                 // Verifica se leu algo do buffer (+1)
-                if (IncomingJson != null) {
+                if (incomingJson != null) {
 
                     // Verifica se não está vazio (+1)
-                    if (!IncomingJson.trim().isEmpty()) {
+                    if (!incomingJson.trim().isEmpty()) {
 
-                        byte[] bytes = IncomingJson.getBytes(ISO_8859_1);
+                        byte[] bytes = incomingJson.getBytes(ISO_8859_1);
                         String jsonStr = new String(bytes, UTF_8);
                         JSONObject dados = new JSONObject(jsonStr);
 
@@ -111,16 +117,12 @@ public class getIngredientesPorLanche extends HttpServlet {
 
                             // Verifica se a chave ID existe antes de acessar (+1)
                             if (dados.has("id")) {
-
-                                // System.out.println(dados.getInt("id"));
-
                                 // Verifica se o DAO foi instanciado (+1)
                                 if (daoIngrediente != null) {
                                     List<Ingrediente> ingredientes = daoIngrediente.listarTodosPorLanche(dados.getInt("id"));
 
                                     // Verifica se a lista retornada não é nula (+1)
                                     if (ingredientes != null) {
-                                        Gson gson = new Gson();
                                         String json = gson.toJson(ingredientes);
 
                                         try (PrintWriter out = response.getWriter()) {
@@ -186,7 +188,11 @@ public class getIngredientesPorLanche extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        processRequest(request, response);
+        try {
+            processRequest(request, response);
+        } catch (Exception e) {
+            logger.severe("Erro no doGet: " + e.getMessage());
+        }
     }
 
     /**
@@ -200,7 +206,11 @@ public class getIngredientesPorLanche extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        processRequest(request, response);
+        try {
+            processRequest(request, response);
+        } catch (Exception e) {
+            logger.severe("Erro no doPost: " + e.getMessage());
+        }
     }
 
     /**
