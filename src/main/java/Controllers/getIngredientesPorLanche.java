@@ -71,29 +71,33 @@ public class getIngredientesPorLanche extends HttpServlet {
         }
 
         BufferedReader br = new BufferedReader(new InputStreamReader(request.getInputStream()));
-        String incomingJson = "";
 
-        ////////Validar Cookie
-        boolean resultado = false;
-
-        if (validador != null && request != null) {
-            Cookie[] cookies = request.getCookies();
-            // Validação de array de cookies (+1)
-            if (cookies != null && validador != null) {
-                resultado = validador.validarFuncionario(cookies);
-            }
-        } else {
-            // Catch conta como ponto de decisão (+1)
-            logger.warning("Request ou Validador nulos na validação do Cookie");
-        }
-
-        if (!resultado) { // (+1)
-            // Falha na autenticação do resultado
+        if (validador == null) {
+            logger.warning("Validador nulo na validação do Cookie");
             enviarErro(response);
             return;
         }
 
-        incomingJson = br.readLine();
+        ////////Validar Cookie
+        boolean resultado = false;
+        Cookie[] cookies = request.getCookies();
+
+        // Validação de array de cookies (+1)
+        if (cookies == null) {
+            logger.warning("Cookies nulos");
+            enviarErro(response);
+            return;
+        }
+
+        resultado = validador.validarFuncionario(cookies);
+        if (!resultado) { // (+1)
+            // Falha na autenticação do resultado
+            logger.warning("Falha na autenticação dos cookies");
+            enviarErro(response);
+            return;
+        }
+
+        String incomingJson = br.readLine();
 
         // Verifica se leu algo do buffer (+1)
         if (incomingJson == null || incomingJson.trim().isEmpty()) {
